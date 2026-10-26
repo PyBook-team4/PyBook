@@ -181,6 +181,7 @@ def main():
             break
         else:
             print("\n준비 중인 기능입니다...\n")
+            
             time.sleep(1)
             clear_screen()
 
