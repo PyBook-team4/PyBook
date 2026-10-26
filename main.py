@@ -108,13 +108,13 @@ def main():
             print("====================================")
             email = input("이메일 (ID): ")
             pw = input("비밀번호: ")
-            #pw_check=input("비밀번호 재확인: ")
+            pw_check=input("비밀번호 재확인: ")
             name = input("이름: ")
             phone = input("전화번호 (예: 010-1234-5678): ")
             interest = input("관심 분야 (예: IT/개발, 소설): ")
             
             # 회원가입 서비스 호출
-            #success,message = member_service.signup(email=email, pw=pw, name=name, phone=phone, interest=interest)
+            #success,message = member_service.signup(email=email, pw=pw, pw_check=pw_check,name=name, phone=phone, interest=interest)
             
             print(f"\n{message}")
             time.sleep(2)
