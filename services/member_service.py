@@ -3,8 +3,9 @@ from datetime import datetime
 from models.member import Member
 from utils.file_handler import load_json, save_json
 
-
+# python -m services.member_service
 import string
+import hashlib
 
 MEMBERS_FILE = "data/members.json"
 
@@ -19,6 +20,10 @@ def _save_members(members: list[Member]) -> None:
     #Member 객체 리스트를 딕셔너리로 변환하여 JSON파일에 저장합니다.
     data = [member.to_dict() for member in members]
     save_json(MEMBERS_FILE, data)
+
+# 비밀번호 해싱
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 # 회원 아이디(이메일) 검증
 def is_valid_email(email: str) -> bool:
@@ -165,13 +170,13 @@ def signup_interests():
 
 
 
-#회원가입
+#💡 회원가입 💡
 #회원가입하는 아이디(이메일)가 기존의 있는 아이디인지 검증해야합니다.
 #비밀번호 해싱 암호화 부분은 구현어려우시면 일단 비밀번호 그대로 members.json에 넣으셔도 됩니다. 나중에 제가 따로 함수 만들어 드리겠습니다.
 #비밀번호는 비밀번호 확인(2차입력) 받으셔야 합니다.
 # signup 함수 선언부 매개변수에 기본값 = "" 추가
 def signup(email: str = "", pw: str = "", name: str = "", phone: str = "", interest: str = "") -> bool:
-     
+    
     members = _get_members()
 
     print("\n---[회원가입]---")
@@ -214,6 +219,9 @@ def signup(email: str = "", pw: str = "", name: str = "", phone: str = "", inter
 
         break
 
+    # 비밀번호 해싱
+    hashed_pw = _hash_password(pw_input)
+
     # 비밀번호 찾기 질문 & 답변
     print("="*50)
     find_pw_info = is_valid_find_pw()
@@ -241,12 +249,14 @@ def signup(email: str = "", pw: str = "", name: str = "", phone: str = "", inter
     # Member 객체 생성 및 JSON 파일 저장
     new_member = Member(
         email=email_input,
-        pw=pw_input,
+        pw=hashed_pw,
         name=name_input,
         phone=phone_input,
         interest=interest_input,
         pw_question=find_pw_info["question"],  # 질문 추가
-        pw_answer=find_pw_info["answer"]       # 답변 추가
+        pw_answer=find_pw_info["answer"],      # 답변 추가
+        created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        last_login=None # 첫 로그인 전에는 None
     )
 
     # 리스트에 추가 후 파일 저장
@@ -256,14 +266,23 @@ def signup(email: str = "", pw: str = "", name: str = "", phone: str = "", inter
     print(f'{name_input}님, 회원가입이 완료되었습니다!')
     return True
 
-#로그인
+#💡 로그인 💡
 def login(email: str, pw: str) -> dict | None:
     members = _get_members()
+    #비밀번호 해싱
+    hashed_pw = _hash_password(pw)
 
     for member in members:
         if member.email == email:
-            if member.pw == pw:
+            if member.pw == hashed_pw:
+                # 로그인 성공 시 마지막 로그인 일시 업데이트
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                member.last_login = now_str
+
+                _save_members(members)
+
                 print(f'{member.name}님, 환영합니다!')
+                print(f'[계정 정보] 가입일: {member.created_at} | 최근 로그인: {member.last_login}')
                 return member.to_dict()
             else:
                 print("비밀번호가 올바르지 않습니다.")
@@ -276,24 +295,52 @@ def login(email: str, pw: str) -> dict | None:
 
 
 
-#로그아웃
+#💡 로그아웃 💡
 #로그아웃기능은 아마 함수로 구현할 부분은 없을 가능성이 높습니다.
 #main에서 세션관리부분만 초기화시키고 처음 홈화면으로 이동시키면 될거같습니다
 def logout(email: str) -> bool:
     # 콘솔 프로그램 특성상 세션 관리는 main.py에서 주로 담당하므로 True 반환
     return True
 
-#회원탈퇴
+#💡 회원탈퇴 💡
 #구현 시 정말 탈퇴하시겠습니까? 같은 문자 출력후 비밀번호 입력하면 json파일에서 회원정보 삭제하는식으로 탈퇴시키면됩니다.
 #회원 탈퇴 후에는 홈화면으로 이동하게됩니다.
 def withdraw(email: str, pw: str) -> bool:
-    pass
+
+    members = _get_members()
+    hashed_pw = _hash_password(pw)
+    # 이메일고 일치하는 회원 찾기
+    target_member = next((m for m in members if m.email == email), None)
+
+    # 이메일 검증
+    if not target_member:
+        print("[오류] 존재하지 않는 회원 계정입니다.")
+        return False
+
+    # 비밀번호 검증
+    if target_member.pw != hashed_pw:
+        print("[오류] 비밀번호가 올바르지 않습니다.")
+        return False
+
+    # 탈퇴 의사 재확인
+    confirm = input("정말로 탈퇴하시겠습니까? (Y/N): ").strip().upper()
+    
+    if confirm == "Y":
+        # 해당 이메일 제외한 리스트로 재구성
+        members = [m for m in members if m.email != email]
+        # JSON 파일에 저장
+        _save_members(members)
+        print("\n 회원 탈퇴가 정상적으로 처리되었습니다. 이용해 주셔서 감사합니다.")
+        return True
+    else:
+        print("\n회원 탈퇴가 취소되었습니다.")
+        return False
 
 
 #회원 정보 수정은 우선 함수 한개로 구성해놓았는데 
 #구현 하실 때 비밀번호 재설정과 phone,interest,name 부분 수정으로 함수 두개로 나눠서 구현하셔도 됩니다.
 
-# 회원 정보 수정
+#💡 회원 정보 수정 💡
 def update(email: str = "", **kwargs)->bool:
     #kwargs 형태로 전달받은 회원정보를 업데이트합니다.
     members = _get_members()
@@ -352,7 +399,7 @@ def update(email: str = "", **kwargs)->bool:
                 print("[오류] 이름을 입력해주세요.")
                 continue
 
-            updated_member.name = new_name
+            updated_member.name = _hash_password(new_pw)
             updated = True
             print("이름이 수정되었습니다.")
 
@@ -396,7 +443,58 @@ def update(email: str = "", **kwargs)->bool:
     return updated
 
 
+# 💡비밀번호 찾기💡
+# 비밀번호 찾기 (질문/답변 검증 후 비밀번호 재설정)
+# 이메일 입력받아 등록된 회원 확인, 비민번호 찾기 질문과 답변 일치하면 새 pw로 변경합니다
+def find_pw() -> bool:
 
+    members = _get_members()
+
+    print("\n--- [비밀번호 찾기] ---")
+    email_input = input("가입하신 아이디(이메일)를 입력하세요: ").strip()
+
+    # 회원 존재 여부 확인
+    target_member = next((m for m in members if m.email == email_input),None)
+
+    if not target_member:
+        print("[오류] 등록되지 않은 이메일 계정입니다.")
+        return False
+
+    # 등록된 질문 출력
+    print(f"\n[비밀번호 찾기 질문]\n {target_member.pw_question}")
+    answer_input = input("답변 입력: ").strip()
+
+    # 답변 검증
+    if target_member.pw_answer != answer_input:
+        print("[오류] 답변이 일치하지 않습니다. 비밀번호를 찾을 수 없습니다.")
+        return False
+
+    print("\n본인 확인이 완료되었습니다.")
+
+    # 새 비밀번호 입력 및 검증
+    while True:
+        new_pw = input("새로운 비밀번호를 입력해주세요: ").strip()
+
+        if not new_pw:
+            print("[오류] 비밀번호는 필수 입력 항목입니다.")
+            continue
+        if not is_valid_pw(new_pw):
+            print("[오류] 비밀번호는 5자 이상이며, 특수문자를 최소 1개 이상 포함해야 합니다.")
+            continue
+
+        pw_check = input("새 비밀번호 확인: ").strip()
+        if new_pw != pw_check:
+            print("[오류] 입력하신 비밀번호가 서로 일치하지 않습니다.")
+            continue
+
+        break
+
+    target_member.pw = _hash_password(new_pw)
+
+    # 변경사항 파일에 저장
+    _save_members(members)
+    print("\n비밀번호가 성공적으로 재설정되었습니다! 새로운 비밀번호로 로그인해주세요.")
+    return True
 
 
     
@@ -407,42 +505,56 @@ def update(email: str = "", **kwargs)->bool:
 #테스트 코드
 # ==========================================
 if __name__ == "__main__":
-    print("=" * 50)
-    print("회원가입 테스트")
-    print("=" * 50)
+    # print("=" * 50)
+    # print("회원가입 테스트")
+    # print("=" * 50)
    
-    signup()
+    # signup()
    
-    ######################
-    print("=" * 50)
-    print("로그인 테스트")
-    print("=" * 50)
+    # ######################
+    # print("=" * 50)
+    # print("로그인 테스트")
+    # print("=" * 50)
 
-    while True:
-        print("\n--- [ 로그인 ] ---")
-        login_email = input("아이디(이메일) 입력: ").strip()
-        login_pw = input("비밀번호 입력: ").strip()
-    ######################
-        # 로그인 시도
-        user_data = login(login_email, login_pw)
+    # while True:
+    #     print("\n--- [ 로그인 ] ---")
+    #     login_email = input("아이디(이메일) 입력: ").strip()
+    #     login_pw = input("비밀번호 입력: ").strip()
+    # ######################
+    #     # 로그인 시도
+    #     user_data = login(login_email, login_pw)
 
-        if user_data:
-            print(f"\n[로그인 성공 데이터 반환 확인]: {user_data}")
-            break
-        else:
-            retry = input("\n다시 로그인하시겠습니까? (Y/N): ").strip().upper()
-            if retry != "Y":
-                print("로그인 테스트를 종료합니다.")
-                break
+    #     if user_data:
+    #         print(f"\n[로그인 성공 데이터 반환 확인]: {user_data}")
+    #         break
+    #     else:
+    #         retry = input("\n다시 로그인하시겠습니까? (Y/N): ").strip().upper()
+    #         if retry != "Y":
+    #             print("로그인 테스트를 종료합니다.")
+    #             break
 
 
     
-    ######################
+    # ######################
+    # print("=" * 50)
+    # print("회원정보수정 테스트")
+    # print("=" * 50)
+
+    # login_email = input("수정할 계정(이메일) 입력: ").strip()
+    
+    # # update 함수 실행 (메뉴 선택창 출력)
+    # update(login_email)
+
+    # ######################
+    # print("=" * 50)
+    # print("회원탈퇴 테스트")
+    # print("=" * 50)
+    # withdraw_email = input("탈퇴할 계정(이메일) 입력: ").strip()
+    # withdraw_pw = input("비밀번호 입력: ").strip()
+    # withdraw(withdraw_email, withdraw_pw)
+
     print("=" * 50)
-    print("회원정보수정 테스트")
+    print("비밀번호 찾기 테스트")
     print("=" * 50)
 
-    login_email = input("수정할 계정(이메일) 입력: ").strip()
-    
-    # update 함수 실행 (메뉴 선택창 출력)
-    update(login_email)
+    find_pw()
