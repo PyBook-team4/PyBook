@@ -1,0 +1,22 @@
+#보안/환경 --절대 github에 올리면 안됨!!
+.env
+
+#가상환경 패키지
+venv/
+.venv/
+env/
+
+#로컬 데이터파일들 
+data/*.json
+data/.csv
+
+# 파이썬 실행 캐시 파일 (실행 시 자동 생성되는 찌꺼기 파일들)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS 및 에디터 설정 파일 (맥, 윈도우, VSCode 등)
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
