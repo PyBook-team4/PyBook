@@ -19,7 +19,7 @@ def _hash_password(password: str) -> str:
 #회원가입하는 아이디(이메일)가 기존의 있는 아이디인아니야지 검증해야합니다.
 #비밀번호 해싱 암호화 부분은 구현어려우시면 일단 비밀번호 그대로 members.json에 넣으셔도 됩니다. 나중에 제가 따로 함수 만들어 드리겠습니다.
 #비밀번호는 비밀번호 확인(2차입력) 받으셔야 합니다.
-def signup(email: str, pw: str, name: str, phone: str = "", interest: str = "") -> bool:
+def signup(email: str, pw: str, pw_check:str,name: str, phone: str = "", interest: str = "") -> bool:
     
     pass
 

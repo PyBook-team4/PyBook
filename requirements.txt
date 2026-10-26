@@ -13,3 +13,6 @@ scikit-learn          # 코사인 유사도 계산 (임베딩 텍스트 기반 �
 
 #테스트를 위한 라이브러리
 pytest
+
+dotenv
+
