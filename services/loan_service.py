@@ -1,6 +1,8 @@
 # services/loan_service.py
 from datetime import datetime, timedelta
+
 from models.loan import Loan
+from models.record import Record
 from utils.file_handler import load_json, save_json
 
 '''
@@ -43,7 +45,7 @@ def borrow(member_id: str | int, book_id: int) -> bool:
     books_data   = load_json("data/books.json")   # 책 정보 접근
     loans_data   = load_json("data/loans.json")   # 대출 정보 접근
 
-    target_member = "" # 대출 신청 회원 찾기용도
+    target_member = None # 대출 신청 회원 찾기용도
 
     # 회원 정보에서 대출 신청한 회원 찾기
     for member in members_data:
@@ -51,7 +53,7 @@ def borrow(member_id: str | int, book_id: int) -> bool:
             target_member = member
             break
     if not target_member:
-        print(f"일치하는 회원 id가 없습니다.")
+        print("일치하는 회원 id가 없습니다.")
         return False
 
     # 찾은 회원 정보(등급, 대출 권한) 가져오기
@@ -70,15 +72,15 @@ def borrow(member_id: str | int, book_id: int) -> bool:
                 print("대출 한도를 초과했습니다.")
                 return False
 
-    target_book = "" # 대출 책 찾기용도
+    target_book = None # 대출 책 찾기용도
 
     for book in books_data: # 책 정보 중 대출 책 찾기
         if book.get("id") == book_id:
             target_book = book
             break
-        if not target_book or target_book.get("available_stock", 0) <= 0: # 대출 요청 책이 없거나, 대출 권수가 0이하면 대출 거부 안내
-            print("해당 도서는 대출이 불가능합니다.")
-            return False
+    if not target_book or target_book.get("available_stock", 0) <= 0: # 대출 요청 책이 없거나, 대출 권수가 0이하면 대출 거부 안내
+        print("해당 도서는 대출이 불가능합니다.")
+        return False
 
     existing_loan_ids = [loan.get("loan_id") for loan in loans_data] # 기존 대출 기록에서 loan_id 가져오기
     if existing_loan_ids: # 기존 대출 기록이 존재하면 새로운 loan_id는 기존 loan_id 최대값 + 1
@@ -96,6 +98,19 @@ def borrow(member_id: str | int, book_id: int) -> bool:
         status      = "대출중"
     )
 
+    # new_loan를 딕셔너리로 대출 목록에 추가
+    loans_data.append(new_loan.to_dict())
+
+    # 해당 도서 재고 1권 차감
+    target_book["available_stock"] -= 1
+
+    # 변경된 대출 기록과 도서 재고 정보를 파일에 저장
+    save_json("data/loans.json", loans_data)
+    save_json("data/books.json", books_data)
+
+    print(f"'{target_book.get('title')}' 도서 대출이 성공적으로 완료되었습니다! (반납기한: {loan_days}일)")
+    return True
+    
     
 #도서 반납
 def return_book(loan_id: int) -> bool:
@@ -114,6 +129,23 @@ def return_book(loan_id: int) -> bool:
 
     for check_loan in loans_data: # 대출 기록에서 대출 정보 확인
         if check_loan.get("loan_id") == loan_id:
+            if check_loan.get("status") == "반납완료": # 중복 반납 방지
+                print("이미 반납 처리가 완료된 도서입니다.")
+                return False
+            now = datetime.now()
+            # 반납 기준일과 오늘 날짜 비교
+            due_date_str = check_loan.get("return_date") 
+            overdue_days = 0 # 반납 지연일
+            
+            if due_date_str:
+                # 문자열 날짜를 datetime로 변환
+                due_date = datetime.strptime(due_date_str, "%Y-%m-%d %H:%M:%S")
+                # 오늘이 반납 예정일보다 늦었다면 연체 일수 계산
+                if now > due_date:
+                    overdue_days = (now - due_date).days
+                    # 당일 초과나 시간초과로 0일이 나오더라도 예정 시간을 넘겼다면 최소 1일로 처리
+                    if overdue_days == 0:
+                        overdue_days = 1
             check_loan["status"] = "반납완료" # 대출 상태 변경
             check_loan["return_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 반납일 업데이트
 
@@ -128,21 +160,30 @@ def return_book(loan_id: int) -> bool:
             for member in members_data:
                 if member.get("member_id") == check_loan.get("member_id"):
                     target_member = member
-                    member["point"] += 10
                     break
+            if target_member:
+                if overdue_days > 0:
+                    # [반납 지연] 1일당 1점씩 차감 (0 이하로 내려가지 않도록 max 처리)
+                    deduction = overdue_days * 1
+                    target_member["point"] = max(0, target_member.get("point", 0) - deduction)
+                    print(f"반납 기한이 {overdue_days}일 지연되었습니다. ({deduction} 포인트 차감 / 현재: {target_member['point']}P)")
+                else:
+                    # [정상 반납] 기본 보상 10포인트 적립
+                    target_member["point"] = target_member.get("point", 0) + 10
+                    print(f" 정상 반납되었습니다. (+10 포인트 적립 / 현재: {target_member['point']}P)")
 
-            # 평점 작성 및 포인트 지급
+            # 평점 작성 및 포인트 지급 (3점 추가)
             rating = None
-            rating_input = input("도서 평점을 남기시겠습니까? (1~5점) ").strip()
+            rating_input = input("도서 평점을 남기시겠습니까? (1~5점 / 엔터 시 건너뜀): ").strip()
             if rating_input.isdigit() and 1 <= int(rating_input) <= 5:
                 rating = int(rating_input)
                 if target_member:
                     target_member["point"] += 3
                 print(f"평점 {rating}점이 등록되었습니다. (+3 포인트)")
 
-            # 리뷰 작성 및 포인트 지급
+            # 리뷰 작성 및 포인트 지급 (7점 추가)
             review = ""
-            review_input = input("도서 감상평(리뷰)을 남기시겠습니까? ").strip()
+            review_input = input("도서 감상평(리뷰)을 남기시겠습니까? (엔터 시 건너뜀): ").strip()
             if review_input:
                 review = review_input
                 if target_member:
@@ -150,20 +191,20 @@ def return_book(loan_id: int) -> bool:
                 print("리뷰 작성이 완료되었습니다. (+7 포인트)")
 
             # 평점이나, 리뷰 중 하나라도 작성했다면, records.json에 기록
-            if review is not None or review:
+            if rating is not None or review:
                 # 새로운 record_id 채번 (기존 최대값 + 1, 없으면 1001)
                 existing_record_ids = [r.get("record_id", 0) for r in records_data]
                 new_record_id = max(existing_record_ids) + 1 if existing_record_ids else 1001
 
-                new_record = {
-                    "record_id": new_record_id,
-                    "member_id": check_loan.get("member_id"),
-                    "book_id": check_loan.get("book_id"),
-                    "rating": rating,
-                    "review": review,
-                    "created_at": datetime.now().strftime("%Y-%m-%d")
-                }
-                records_data.append(new_record)
+                new_record = Record(
+                    record_id=new_record_id,
+                    member_id=check_loan.get("member_id"),
+                    book_id=check_loan.get("book_id"),
+                    rating=rating,
+                    review=review,
+                    created_at=datetime.now().strftime("%Y-%m-%d")
+                    )
+                records_data.append(new_record.to_dict())
 
             # 파일 저장
             save_json("data/members.json", members_data)
@@ -172,5 +213,34 @@ def return_book(loan_id: int) -> bool:
             save_json("data/records.json", records_data)
 
             return True
+        
+    print("일치하는 대출 기록(loan_id)을 찾을 수 없습니다.")
+    return False
 
 
+def get_user_active_loans(member_id: str | int) -> list:
+    """현재 대출 도서 내역 확인    """
+    loans_data = load_json("data/loans.json")
+    books_data = load_json("data/books.json")
+    
+    active_loans = []
+    
+    for loan in loans_data:
+        # 로그인한 회원의 대출 내역이고, 현재 '대출중' 상태인 확인
+        if loan.get("member_id") == member_id and loan.get("status") == "대출중":
+            # 책 제목도 함께 보여주기 위해 book_id로 books_data에서 제목 찾기
+            book_title = "알 수 없는 도서"
+            for b in books_data:
+                if b.get("id") == loan.get("book_id"):
+                    book_title = b.get("title")
+                    break
+            
+            # 반납 화면에서 쓰기 편하게 정보 합치기
+            active_loans.append({
+                "loan_id": loan.get("loan_id"),
+                "book_title": book_title,
+                "loan_date": loan.get("loan_date"),
+                "return_date": loan.get("return_date")
+            })
+            
+    return active_loans
