@@ -10,6 +10,7 @@ import hashlib
 import re
 
 MEMBERS_FILE = "data/members.json"
+LOAN_FILE="data/loans.json"
 
 def _get_members() -> list:
     # json파일에서 회원 데이터를 Member 객체 리스트로 반환합니다.
@@ -325,6 +326,24 @@ def withdraw(email: str, pw: str) -> bool:
     # 비밀번호 검증
     if target_member.pw != pw:
         print("[오류] 비밀번호가 올바르지 않습니다.")
+        return False
+
+    #대출 항목 중 미 반납 항목이 있는지 검사
+    #TODO 현재 withdraw(email,pw)을 받고 있어서 member.json에서 id를 다시 찾아와야됨 코드리팩토링 진행 시 wirhdraw(user_id, pw)이런식으로 변경하고 loans.json에 있는 user_id와 바로 비교
+
+    loans_data=load_json(LOAN_FILE)     #전체 대출 기록 파일 불러오기
+    target_user_id = target_member.user_id  #방금 찾은 회원의 고유 번호(user_id) 저장
+    
+     #any() 함수 사용해서 "대출중" 인 책이 하나라도 있는지 검사
+    has_active_loan = any(
+        # 2. 각 기록들 (loan) 보면서  다음 두 조건을 만족하는 loan이 하나라도 있으면 무조건 True 반환(=has_active_loan은 True가 됨)
+        loan.get("user_id") == target_user_id and loan.get("status") == "대출중"
+        # 1. loans_data에 있는 대출 기록들을 하나씩(loan) 불러오기
+        for loan in loans_data          
+    )
+
+    if has_active_loan:
+        print("\n[오류] 현재 대출 중인 도서가 있어 탈퇴할 수 없습니다. 도서를 먼저 반납해 주세요.")
         return False
 
     # 탈퇴 의사 재확인
