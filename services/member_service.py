@@ -521,8 +521,53 @@ def find_pw() -> bool:
     return True
 
 
-    
+def show_member_info(email: str) -> dict | None:
+    """
+    현재 로그인한 회원의 상세 정보를 출력하고 회원 딕셔너리를 반환하는 함수
+    - email: 현재 로그인한 회원의 이메일 (str)
+    - 반환값: 회원 정보 딕셔너리 (찾지 못한 경우 None)
+    """
+    print("\n=== [ 내 정보 확인 ] ===")
 
+    # JSON 파일에서 전체 회원 리스트 불러오기.
+    members = load_json('data/members.json')
+
+    # 전체 회원 리스트에서 하나씩 꺼내며 내 계정 찾기.
+    for member in members:
+        
+        # 이메일이 일치하는 내 회원 딕셔너리
+        if member.get("email") == email:
+            
+            # 비밀번호는 보안을 위해 글자 수만큼 '*'로 가려서 출력하도록 "예외 처리" 추가.
+            pw_length = len(member.get("pw", ""))
+            masked_pw = "*" * pw_length
+
+            # 회원 정보 화면 출력. (값이 비어있을 경우 '미입력'으로 표시)
+            print(f"• 이메일(ID) : {member.get('email')}")
+            print(f"• 비밀번호   : {masked_pw}")
+            print(f"• 이름       : {member.get('name', '미입력')}")
+            print(f"• 전화번호   : {member.get('phone') or '미입력'}")
+            print(f"• 관심분야   : {member.get('interest') or '미입력'}")
+            
+            # 추가 정보 조건부 출력. (json.md의 tier, point, created_at, last_login_date 반영)
+            if "tier" in member:
+                print(f"• 회원등급     : {member.get('tier')}")
+
+            if "point" in member:
+                print(f"• 포인트       : {member.get('point'):,}P")
+
+            if "created_at" in member:
+                print(f"• 가입일       : {member.get('created_at')}")
+
+            if "last_login_date" in member:
+                print(f"• 최근 로그인  : {member.get('last_login_date')}")
+                
+            print("==========================")
+            return member
+
+    # 일단 예외의 경우를 위해 적어놨지만, 필요한지 의문
+    print("❌ 회원 정보를 찾을 수 없습니다.")
+    return None
 
 
 # ==========================================
