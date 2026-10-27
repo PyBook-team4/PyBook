@@ -29,13 +29,14 @@ class OpenAIClient:
         # GPT에게 역할을 부여하고 퀴즈 생성을 요청하는 코드
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini", # 추후 성능보고 다른 모델로 변경예정   //gpt4o 로 사용해도 될듯
+                model="gpt-4o", # 추후 성능보고 다른 모델로 변경예정   //gpt4o 로 사용해도 될듯
                 #프롬프트 엔지니어링 부분 추후 system에 content 부분 템플릿 양식으로 응답대신 json이나 다른형식으로 받게 할수도 있음
                 messages=[
                     {
                         "role": "system", 
                         "content": """너는 PyBook 독서 퀴즈 출제 위원이야. 
                         반드시 아래의 템플릿 양식을 100% 똑같이 지켜서 응답해.
+                        책의 내용을 바탕으로 문제를 내도록 해.
                         다른 부연 설명이나 인사말은 절대 하지 마.
 
                         [문제] (여기에 문제를 작성)
@@ -58,7 +59,7 @@ class OpenAIClient:
 
 
 #아래 부분 주석처리
-"""
+
 #임시 테스트 코드, 추후 테스트 폴더에서 진행
 if __name__ == "__main__":
     print("--- OpenAI API 연동 테스트 시작 ---")
@@ -108,4 +109,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n[테스트 실패] {e}")
 
-        """
+    
