@@ -8,6 +8,7 @@ from animations.animation_effect import clear_screen
 import string
 import hashlib
 import re
+import time
 
 MEMBERS_FILE = "data/members.json"
 LOAN_FILE="data/loans.json"
@@ -344,6 +345,7 @@ def withdraw(email: str, pw: str) -> bool:
 
     if has_active_loan:
         print("\n[오류] 현재 대출 중인 도서가 있어 탈퇴할 수 없습니다. 도서를 먼저 반납해 주세요.")
+        time.sleep(2)
         return False
 
     # 탈퇴 의사 재확인

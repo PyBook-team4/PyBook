@@ -2,10 +2,13 @@
 import time
 #from services.book_service import initialize_books_if_empty
 from services import member_service,search_service,loan_service
+from services.ai_service import AIChatService
 from animations.animation_effect import (
     show_intro_animation, 
     show_goodbye_animation, 
-    clear_screen
+    clear_screen,
+    connecting_ai_animation,
+    typing_effect
 )
 
 #가장 아래 부분에 main을 제외한 함수들은 네비게이션 로직입니다. 
@@ -166,6 +169,17 @@ def run_logged_in_menu(current_user):
                 else:
                     print("\n[오류] 올바른 번호를 입력해주세요.")
                     time.sleep(1.5)
+        elif sub_choice == '5':
+            # 1. 챗봇 진입 애니메이션 실행
+            connecting_ai_animation()
+            
+            # 2. 챗봇 서비스 객체 생성 및 채팅 루프 시작
+            chat_service = AIChatService()
+            chat_service.start_chat()
+            
+            # 3. 챗봇 종료(exit) 후 빠져나왔을 때 자연스러운 전환
+            typing_effect("메인 메뉴로 돌아갑니다...", speed=0.03)
+            time.sleep(1)
         elif sub_choice=='8':
             member_service.update(current_user['email'])
             
