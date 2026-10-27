@@ -2,10 +2,12 @@
 from datetime import datetime
 from models.member import Member
 from utils.file_handler import load_json, save_json
-
+#콘솔창 구현 한것중에 clear_screen해야되는 부분에 적용 ex) 회원정보 수정부분 
+from animations.animation_effect import clear_screen
 # python -m services.member_service
 import string
 import hashlib
+import re
 
 MEMBERS_FILE = "data/members.json"
 
@@ -32,6 +34,9 @@ def is_valid_email(email: str) -> bool:
         return False
     # 길이검증(5자 이상)
     if len(email) < 5:
+        return False
+    email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    if not re.match(email_regex, email):
         return False
 
 
@@ -175,10 +180,10 @@ def signup_interests():
 #비밀번호 해싱 암호화 부분은 구현어려우시면 일단 비밀번호 그대로 members.json에 넣으셔도 됩니다. 나중에 제가 따로 함수 만들어 드리겠습니다.
 #비밀번호는 비밀번호 확인(2차입력) 받으셔야 합니다.
 
-def signup(email: str, pw: str, pw_check:str,name: str, phone: str = "", interest: str = "") -> bool:
+def signup() -> bool:
 
-    
     members = _get_members()
+    new_id = max([getattr(m, 'user_id', 0) for m in members], default=0) + 1
 
     print("\n---[회원가입]---")
 
@@ -249,11 +254,13 @@ def signup(email: str, pw: str, pw_check:str,name: str, phone: str = "", interes
     
     # Member 객체 생성 및 JSON 파일 저장
     new_member = Member(
+        user_id=new_id,
         email=email_input,
         pw=hashed_pw,
         name=name_input,
         phone=phone_input,
         interest=interest_input,
+        point=100,
         pw_question=find_pw_info["question"],  # 질문 추가
         pw_answer=find_pw_info["answer"],      # 답변 추가
         created_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -284,7 +291,7 @@ def login(email: str, pw: str) -> dict | None:
 
                 print(f'{member.name}님, 환영합니다!')
                 print(f'[계정 정보] 가입일: {member.created_at} | 최근 로그인: {member.last_login}')
-                return member.to_dict()
+                return True, member.to_dict()
             else:
                 print("비밀번호가 올바르지 않습니다.")
                 return None
@@ -309,8 +316,7 @@ def logout(email: str) -> bool:
 def withdraw(email: str, pw: str) -> bool:
 
     members = _get_members()
-    hashed_pw = _hash_password(pw)
-    # 이메일고 일치하는 회원 찾기
+    # 이메일과 일치하는 회원 찾기
     target_member = next((m for m in members if m.email == email), None)
 
     # 이메일 검증
@@ -319,7 +325,7 @@ def withdraw(email: str, pw: str) -> bool:
         return False
 
     # 비밀번호 검증
-    if target_member.pw != hashed_pw:
+    if target_member.pw != pw:
         print("[오류] 비밀번호가 올바르지 않습니다.")
         return False
 
@@ -387,7 +393,7 @@ def update(email: str = "", **kwargs)->bool:
                 if new_pw != pw_confirm:
                     print("[오류] 비밀번호가 일치하지 않습니다.")
 
-                updated_member.pw = new_pw
+                updated_member.pw = _hash_password(new_pw)
                 updated = True
                 print("비밀번호가 수정되었습니다.")
                 break
@@ -400,7 +406,7 @@ def update(email: str = "", **kwargs)->bool:
                 print("[오류] 이름을 입력해주세요.")
                 continue
 
-            updated_member.name = _hash_password(new_pw)
+            updated_member.name = new_name
             updated = True
             print("이름이 수정되었습니다.")
 

@@ -1,7 +1,7 @@
 # main.py
 import time
 #from services.book_service import initialize_books_if_empty
-#from services import member_service
+from services import member_service
 from animations.animation_effect import (
     show_intro_animation, 
     show_goodbye_animation, 
@@ -18,7 +18,7 @@ def run_logged_in_menu(current_user):
         clear_screen()
         print(f"====================================")
         print(f"   [환영합니다, {current_user['name']} 님!]")
-        print(f"   보유 포인트: {current_user['point']}P | 등급: {current_user['tier']}")
+        print(f"   보유 포인트: {current_user['point']}P ") #TODO 등급: {current_user['tier']} 따로 함수 하나 더 짜서 포인트별 등급 매기기
         print("====================================")
         print("1. 도서 검색 및 대출하기")
         print("2. 도서 반납하기")
@@ -28,7 +28,7 @@ def run_logged_in_menu(current_user):
         print("7. 마이페이지")   #마이페이지안에 회원정보 수정,회원탈퇴, 나의 대출 이력 조회등을 넣는게 나을수도..?
         print("8. 회원 정보 수정")
         print("9. 로그아웃")
-        print("10. 회원탈퇴")
+        print("0. 회원탈퇴")
         print("====================================")
         
         sub_choice = input("메뉴를 선택하세요: ")
@@ -44,11 +44,26 @@ def run_logged_in_menu(current_user):
 
             print("\n도서 검색 및 대출 기능 연동 예정...\n")
             time.sleep(1.5)
+
+
+        elif sub_choice=='8':
+            member_service.update(current_user['email'])
             
         elif sub_choice == '9':
-            print("\n 로그아웃합니다.")
-            time.sleep(1)
-            break  # 이 루프를 탈출하면 main으로 돌아가며 세션(current_user) 소멸
+            if member_service.logout:
+                print("\n 로그아웃합니다.")
+                time.sleep(1)
+                break   # 이 루프를 탈출하면 main으로 돌아가며 세션(current_user) 소멸
+                
+        #회원탈퇴
+        elif sub_choice == '0':
+            if member_service.withdraw(current_user["email"],current_user["pw"]):
+                break
+            else:
+                continue
+
+        
+
 
 """관리자 로그인 성공 후 진입하는 전용 메뉴"""
 def run_admin_menu():
@@ -59,7 +74,7 @@ def run_admin_menu():
         print("         PyBook Admin Menu        ")
         print("====================================")
         print("1. 전체 회원 목록 조회")
-        print("2. 도서 재고 강제 일괄 갱신")
+        print("2. 도서 재고 강제 일괄 갱신(CRUD)")
         print("3. 로그아웃 (메인으로 돌아가기)")
         print("====================================")
         
@@ -106,48 +121,91 @@ def main():
             print("====================================")
             print("            회원가입 화면           ")
             print("====================================")
-            email = input("이메일 (ID): ")
-            pw = input("비밀번호: ")
-            pw_check=input("비밀번호 재확인: ")
-            name = input("이름: ")
-            phone = input("전화번호 (예: 010-1234-5678): ")
-            interest = input("관심 분야 (예: IT/개발, 소설): ")
+            
             
             # 회원가입 서비스 호출
-            #success,message = member_service.signup(email=email, pw=pw, pw_check=pw_check,name=name, phone=phone, interest=interest)
+            success = member_service.signup()
             
-            print(f"\n{message}")
+            #print(f"\n{message}")
             time.sleep(2)
             clear_screen()
             
         #로그인 (2) 입력시 
-        if choice == '2':
+        elif choice == '2':
+            while True:
+                clear_screen()
+                print("====================================")
+                print("            로그인 화면             ")
+                print("====================================")
+                print("1. 로그인 하기")
+                print("2. 비밀번호 찾기")
+                print("3. 뒤로 가기 (메인 메뉴)")
+                print("====================================")
+                
+                login_choice = input("원하시는 메뉴 번호를 입력하세요: ").strip()
+                
+                # 1. 일반 로그인 진행
+                if login_choice == '1':
+                    clear_screen()
+                    print("====================================")
+                    print("            일반 로그인             ")
+                    print("====================================")
+                    email = input("아이디 (이메일): ").strip()
+                    pw = input("비밀번호: ").strip()
+                    
+                    # 서비스 레이어 호출 (성공여부, 회원정보 반환)
+                    result = member_service.login(email=email, pw=pw)
+                    
+                    # 팀원 코드가 (success, user_data) 튜플을 반환하므로 안전하게 언패킹
+                    if result:
+                        success, user_data = result
+                    else:
+                        success, user_data = False, None
+                        
+                    time.sleep(1.5)
+
+                    if success:
+                        current_user = user_data  # 세션에 회원 정보 딕셔너리 할당
+                        clear_screen()
+                        run_logged_in_menu(current_user)  # 로그인 후 전용 메뉴 진입
+                        current_user = None  # 로그아웃 후 세션 비우기
+                    break  # 로그인이 끝나거나 실패하면 메인으로 복귀를 위해 루프 탈출
+
+                # 2. 비밀번호 찾기 진입
+                elif login_choice == '2':
+                    clear_screen()
+                    # 팀원분이 member_service에 만들어둔 find_pw() 호출
+                    member_service.find_pw()
+                    
+                    print("\n잠시 후 로그인 화면으로 돌아갑니다...")
+                    time.sleep(2)
+
+                # 3. 뒤로 가기 (메인 메뉴로 복귀)
+                elif login_choice == '3':
+                    print("\n메인 메뉴로 돌아갑니다.")
+                    time.sleep(1)
+                    break  # 현재 로그인 화면 루프를 탈출하여 메인 메뉴로 이동
+
+                else:
+                    print("\n[오류] 올바른 메뉴 번호를 입력해주세요.\n")
+                    time.sleep(1.5)
+        '''if choice == '2':
             clear_screen()
             print("====================================")
             print("            로그인 화면             ")
             print("====================================")
+            print("1.비밀번호 찾기")
+            print("2.뒤로 가기")
+            
+            
             email = input("아이디 (이메일): ")
             pw = input("비밀번호: ")
             
-            # 서비스 레이어 호출 (성공여부, 메시지, 회원정보 반환)
-            #success, message, user_data = member_service.login(email=email, pw=pw)
-            #test용
-            success=True
-            message="로그인 성공"
-            user_data={
-                    "user_id":101,         
-                    "email": "test@naver.com",  
-                    "pw": "hashed_password_string",
-                    "name": "test",
-                    "phone": "010-1234-5678",
-                    "interest": "IT/개발, 소설",
-                    "point": 120,
-                    "tier": "Silver",
-                    "last_login_date": "2026-10-19",
-                    "created_at": "2026-10-01"
-                    }
+            #서비스 레이어 호출 (성공여부, 메시지, 회원정보 반환)
+            success,user_data = member_service.login(email=email, pw=pw)
+    
+
             
-            print(f"\n{message}")
             time.sleep(1.5)
 
 
@@ -156,8 +214,8 @@ def main():
                 clear_screen()
                 run_logged_in_menu(current_user)  # 세션을 가지고 로그인 전용 메뉴로 진입 아직 미구현상태라 에러뜸
                 current_user = None  # 로그아웃 후 빠져나오면 세션 비우기
-        
-        # 입력시 
+        '''
+        # 관리자 로그인 3 입력시 
         if choice == '3':
             clear_screen()
             print("====================================")
@@ -180,7 +238,7 @@ def main():
             show_goodbye_animation()
             break
         else:
-            print("\n준비 중인 기능입니다...\n")
+            #print("\n준비 중인 기능입니다...\n")
             time.sleep(1)
             clear_screen()
 
