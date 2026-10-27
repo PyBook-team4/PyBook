@@ -36,7 +36,7 @@ data/loans.json (대출 및 반납 이력)
 [
   {
     "loan_id": 101,
-    "user_id": "test",
+    "user_id": 1,
     "book_id": 1,
     "loan_date": "2026-10-15",
     "due_date": "2026-10-29",
@@ -49,7 +49,7 @@ data/records.json (독서 노트 및 ai 분석 결과)
 [
   {
     "record_id": 1001,
-    "user_id": 101,
+    "user_id": 1,
     "book_id": 1,
     "rating": 5,
     "review": "초보자가 파이썬 기초를 다지기에 이만한 책이 없습니다.",

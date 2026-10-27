@@ -1,7 +1,7 @@
 # main.py
 import time
 #from services.book_service import initialize_books_if_empty
-from services import member_service
+from services import member_service,search_service,loan_service
 from animations.animation_effect import (
     show_intro_animation, 
     show_goodbye_animation, 
@@ -35,22 +35,137 @@ def run_logged_in_menu(current_user):
         print("9. 로그아웃")
         print("0. 회원탈퇴")
         print("====================================")
+     
         
         sub_choice = input("메뉴를 선택하세요: ")
-        
+        # 1. 도서 검색 및 대출하기
         if sub_choice == '1':
-            # current_user['email']이나 id를 활용해 대출 서비스 호출
-            want_book=input("찾으시는 도서를 입력해주세요...")
-            result, message =loan_service.search(want_book)
-            #result 찾은 도서 리스트또는 딕셔너리로 반환(책제목,저자,출판사, 대출가능권수 등 )
-            # message want_book 검색결과 입니다 또는 찾으시는 검색 결과가 없습니다.
-            title=input('대출할 도서를 입력해주세요...')
-            succes=loan_service.borrow(current_user["user_id"], title)
-
-            print("\n도서 검색 및 대출 기능 연동 예정...\n")
+            clear_screen()
+            print("====================================")
+            print("            도서 검색               ")
+            print("====================================")
+            keyword = input("검색할 도서 제목, 저자, 장르를 입력하세요: ").strip()
+            
+            results, message = search_service.search_books(keyword)
+            print(f"\n{message}")
             time.sleep(1.5)
+            
+            if not results:
+                continue
+                
+            current_results = results
+            ##도서 검색 결과 반환 및 다음 action을 위한 창
+            while True:
+                clear_screen()
+                print("====================================")
+                print(f"          검색 결과 (총 {len(current_results)}건)        ")
+                print("====================================")
+                
+                for idx, book in enumerate(current_results, start=1):
+                    title = book.get('title', '제목 없음')
+                    author = book.get('author', '저자 미상')
+                    genre = book.get('genre', '기타')
+                    stock = book.get('available_stock', 0)
+                    rating = book.get('rating', 0.0)
+                    print(f"{idx}. [{genre}] '{title}' - {author} (평점: {rating} | 남은 재고: {stock}개)")
+                
+                print("====================================")
+                print("1. 결과 내 재검색 (2차 검색)")
+                print("2. 결과 정렬하기")
+                print("3. 도서 대출하기 (번호 선택)")
+                print("0. 이전 메뉴로 돌아가기")
+                print("====================================")
+                
+                action_choice = input("원하시는 작업을 선택하세요: ").strip()
+                
+                if action_choice == '1':
+                    scnd_kw = input("결과 내에서 다시 검색할 키워드를 입력하세요: ").strip()
+                    current_results, msg = search_service.scnd_search_books(current_results, scnd_kw)
+                    print(f"\n{msg}")
+                    time.sleep(1.5)
+                
+                elif action_choice == '2':
+                    print("\n[ 정렬 기준 선택 ]")
+                    print("1. 제목순 (title)")
+                    print("2. 평점순 (rating)")
+                    print("3. 저자순 (author)")
+                    print("4. 재고순 (available_stock)")
 
 
+                    sort_idx = input("정렬 기준 번호 입력: ").strip()
+
+                    #sort_map 딕셔너리 형태로 번호와 정렬의 기준들을 저장한 후 serach_service.sort_books에 넘깁니다.
+                    sort_map = {'1': 'title', '2': 'rating', '3': 'author', '4': 'available_stock'}
+                    sort_by = sort_map.get(sort_idx, 'title')
+                    
+                    rev_input = input("내림차순으로 정렬하시겠습니까? (y/n): ").strip().lower()
+                    is_reverse = (rev_input == 'y')
+                    
+                    current_results = search_service.sort_books(current_results, sort_by=sort_by, reverse=is_reverse)
+                    print("\n 정렬이 완료되었습니다!")
+                    time.sleep(1)
+                
+                # 3. 도서 대출하기 연동 부분
+                elif action_choice == '3':
+                    try:
+                        book_num = int(input("대출할 도서 번호를 입력하세요: ").strip())
+                        if 1 <= book_num <= len(current_results):
+                            selected_book = current_results[book_num - 1]
+                            book_id = selected_book.get("id")
+                            
+                            # loan_service의 borrow 함수 호출 (로그인한 유저의 user_id와 책 id 전달)
+                            success = loan_service.borrow(user_id=current_user['user_id'], book_id=book_id)
+                            
+                            time.sleep(2)
+                        else:
+                            print("\n[오류] 목록에 있는 번호를 입력해주세요.")
+                            time.sleep(1.5)
+                    except ValueError:
+                        print("\n[오류] 숫자만 입력 가능합니다.")
+                        time.sleep(1.5)
+                
+                elif action_choice == '0':
+                    break
+                else:
+                    print("\n[오류] 올바른 번호를 입력해주세요.")
+                    time.sleep(1)
+
+        # 2. 도서 반납하기 연동 부분
+        elif sub_choice == '2':
+            clear_screen()
+            print("====================================")
+            print("            도서 반납하기           ")
+            print("====================================")
+            
+            # 현재 로그인한 유저가 대출 중인 목록 가져오기
+            active_loans = loan_service.get_user_active_loans(current_user['user_id'])
+            
+            if not active_loans:
+                print("\n현재 대출 중인 도서가 없습니다.")
+                time.sleep(2)
+                continue
+                
+            print("대출 중인 도서 목록:")
+            for idx, loan in enumerate(active_loans, start=1):
+                print(f"{idx}. 도서명: '{loan['book_title']}' (대출일: {loan['loan_date']} ~ 반납기한: {loan['return_date']})")
+            
+            print("====================================")
+            return_idx = input("반납할 도서의 번호를 입력하세요 (취소는 엔터): ").strip()
+            
+            if return_idx.isdigit():
+                idx_num = int(return_idx)
+                if 1 <= idx_num <= len(active_loans):
+                    target_loan = active_loans[idx_num - 1]
+                    loan_id = target_loan["loan_id"]
+                    
+                    # 🔑 loan_service의 return_book 함수 호출 (리뷰/평점 입력 및 포인트 정산 진행)
+                    loan_service.return_book(loan_id)
+                    
+                    # 반납 후 포인트가 변동되었을 수 있으므로 최신 정보 반영 (필요시 current_user['point'] 갱신)
+                    time.sleep(2)
+                else:
+                    print("\n[오류] 올바른 번호를 입력해주세요.")
+                    time.sleep(1.5)
         elif sub_choice=='8':
             member_service.update(current_user['email'])
             

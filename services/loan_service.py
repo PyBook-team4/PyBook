@@ -32,7 +32,7 @@ LOAN_TIER = {
 
 
 #도서 대출
-def borrow(member_id: str | int, book_id: int) -> bool:
+def borrow(user_id: str | int, book_id: int) -> bool:
     """도서 대출: 재고 확인 후 대출 기록 생성 및 재고 감소"""
     # 1. 도서 존재 여부 및 대출 가능 재고 확인 (books.json 접근)
     # 2. 새로운 loan_id 생성     (loans.json 접근)
@@ -49,7 +49,7 @@ def borrow(member_id: str | int, book_id: int) -> bool:
 
     # 회원 정보에서 대출 신청한 회원 찾기
     for member in members_data:
-        if member.get("member_id") == member_id:
+        if member.get("user_id") == user_id:
             target_member = member
             break
     if not target_member:
@@ -65,7 +65,7 @@ def borrow(member_id: str | int, book_id: int) -> bool:
     current_loan_count = 0 # 현재 대출 권수
 
     for loan in loans_data: # 대출 기록에서 target_member가 일치하는지 확인
-        is_same_member = loan.get("member_id") == target_member.get("member_id") # is_same_member: 대출 신청 회원과 회원 목록 중 회원 일치 여부
+        is_same_member = loan.get("user_id") == target_member.get("user_id") # is_same_member: 대출 신청 회원과 회원 목록 중 회원 일치 여부
         if is_same_member and loan.get("status") == "대출중": # 회원이 일치하고, 대출중이면 현재 대출권수 1씩 증가
             current_loan_count += 1
             if current_loan_count >= max_books:
@@ -91,7 +91,7 @@ def borrow(member_id: str | int, book_id: int) -> bool:
     # 새로운 대출 기록 생성
     new_loan = Loan(
         loan_id     = new_loan_id,
-        member_id   = target_member.get("member_id"),
+        user_id   = target_member.get("user_id"),
         book_id     = target_book.get("id"),
         loan_date   = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         return_date = (datetime.now() + timedelta(days=loan_days)).strftime("%Y-%m-%d %H:%M:%S"),
@@ -158,7 +158,7 @@ def return_book(loan_id: int) -> bool:
             # 반납 보상 포인트 지급 (예: 반납 시 10 포인트 적립)
             target_member = None
             for member in members_data:
-                if member.get("member_id") == check_loan.get("member_id"):
+                if member.get("user_id") == check_loan.get("user_id"):
                     target_member = member
                     break
             if target_member:
@@ -198,7 +198,7 @@ def return_book(loan_id: int) -> bool:
 
                 new_record = Record(
                     record_id=new_record_id,
-                    member_id=check_loan.get("member_id"),
+                    user_id=check_loan.get("user_id"),
                     book_id=check_loan.get("book_id"),
                     rating=rating,
                     review=review,
@@ -218,7 +218,7 @@ def return_book(loan_id: int) -> bool:
     return False
 
 
-def get_user_active_loans(member_id: str | int) -> list:
+def get_user_active_loans(user_id: str | int) -> list:
     """현재 대출 도서 내역 확인    """
     loans_data = load_json("data/loans.json")
     books_data = load_json("data/books.json")
@@ -227,7 +227,7 @@ def get_user_active_loans(member_id: str | int) -> list:
     
     for loan in loans_data:
         # 로그인한 회원의 대출 내역이고, 현재 '대출중' 상태인 확인
-        if loan.get("member_id") == member_id and loan.get("status") == "대출중":
+        if loan.get("user_id") == user_id and loan.get("status") == "대출중":
             # 책 제목도 함께 보여주기 위해 book_id로 books_data에서 제목 찾기
             book_title = "알 수 없는 도서"
             for b in books_data:
