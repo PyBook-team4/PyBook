@@ -12,6 +12,7 @@ def load_json(filename):
             print(f"파일을 불러오는 중 오류 발생 ({filename}): {e}")
     return []
 
+@staticmethod
 def save_json(filename, data_list):
     """데이터 리스트를 JSON 파일에 저장"""
     try:

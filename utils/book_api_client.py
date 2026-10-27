@@ -4,7 +4,7 @@ import json
 import urllib.request
 import urllib.parse
 from dotenv import load_dotenv
-from typing import Union    #현재 python 버전문제로 union으로 써야함
+from typing import Union    
 # .env 파일에서 환경변수 로드
 load_dotenv(dotenv_path=".env")
 
@@ -16,7 +16,7 @@ class BookClient:
         
         self.url = "https://www.nl.go.kr/NL/search/openApi/search.do"
 
-    def search_book(self, keyword: str, page_size: int = 5) -> Union[dict, str]:  #버전업그레이드 시 -> dict|str: 로 변경
+    def search_book(self, keyword: str, page_size: int = 5) -> dict|str: 
        #  API 요청 파라미터 구성 // 나중에 요청사항에 맞게 파라미터 받는형식으로 변경해야함
         params = {
             "key": self.api_key,
