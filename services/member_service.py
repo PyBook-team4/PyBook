@@ -522,7 +522,7 @@ def find_pw() -> bool:
     print("\n비밀번호가 성공적으로 재설정되었습니다! 새로운 비밀번호로 로그인해주세요.")
     return True
 
-
+#TODO main에 마인페이지에 내정보 보여주기로 연동해보기
 def show_member_info(email: str) -> dict | None:
     """
     현재 로그인한 회원의 상세 정보를 출력하고 회원 딕셔너리를 반환하는 함수

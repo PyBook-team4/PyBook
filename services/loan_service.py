@@ -119,6 +119,7 @@ def return_book(loan_id: int) -> bool:
     # 2. 해당 도서 재고 복구 (available_stock + 1)
     # 3. 반납 보상 포인트 지급 (예: 반납 시 10 포인트 적립)  members.json 접근
     # 4, 리뷰, 평점 남길 시 (예: 10포인트 추가 적립)        records.json 접근
+    #TODO 책 퀴즈 맞출시 5포인트 적립 그냥 건너뛰어도 됨
     # 5. 파일 저장
     
     # 접근 데이터 한번에 호출

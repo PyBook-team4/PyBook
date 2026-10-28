@@ -323,32 +323,7 @@ def main():
                 else:
                     print("\n[오류] 올바른 메뉴 번호를 입력해주세요.\n")
                     time.sleep(1.5)
-        '''if choice == '2':
-            clear_screen()
-            print("====================================")
-            print("            로그인 화면             ")
-            print("====================================")
-            print("1.비밀번호 찾기")
-            print("2.뒤로 가기")
-            
-            
-            email = input("아이디 (이메일): ")
-            pw = input("비밀번호: ")
-            
-            #서비스 레이어 호출 (성공여부, 메시지, 회원정보 반환)
-            success,user_data = member_service.login(email=email, pw=pw)
-    
-
-            
-            time.sleep(1.5)
-
-
-            if success:
-                current_user = user_data  # 로그인 성공 시 세션에 회원 정보 할당(아마 멤버.dict를 들고 있으면 될거같음)
-                clear_screen()
-                run_logged_in_menu(current_user)  # 세션을 가지고 로그인 전용 메뉴로 진입 아직 미구현상태라 에러뜸
-                current_user = None  # 로그아웃 후 빠져나오면 세션 비우기
-        '''
+        
         # 관리자 로그인 3 입력시 
         if choice == '3':
             clear_screen()

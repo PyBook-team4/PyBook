@@ -8,6 +8,9 @@ from typing import Union
 # .env 파일에서 환경변수 로드
 load_dotenv(dotenv_path=".env")
 
+#TODO 아래 내용을 어디다가 반영할건지?
+
+
 class BookClient:
     def __init__(self):
         self.api_key = os.getenv("API_KEY")
