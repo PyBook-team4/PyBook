@@ -29,12 +29,14 @@ def get_my_loan_history(current_user: dict) -> list[dict]:
             book_id = loan.get("book_id")
             book_title = loan.get("title")
             book_author = loan.get("author")
+            book_genre = loan.get("genre")
           
 
             for book in books:
                 if str(book.get("book_id")) == str(book_id):
                     book_title = book.get("title")
                     book_author = book.get("author")
+                    book_genre = book.get("genre")
  
                     break
              # 반납일이 없으면 "대출 중", 상태 표시
@@ -51,6 +53,7 @@ def get_my_loan_history(current_user: dict) -> list[dict]:
                 {
                     "title": book_title,
                     "author": book_author,
+                    "genre" : book_genre,
                     "loan_date": loan.get("loan_date", "-"),
                     "return_date": display_return_date,
                     "status": status_str,
@@ -73,7 +76,7 @@ def print_my_loan_history(current_user: dict) -> None:
         print("  대출 또는 반납된 내역이 존재하지 않습니다.")
     else:
         for idx, item in enumerate(history, 1):
-            print(f" {idx}. [{item['status']}] {item['title']} ({item['author']})")
+            print(f" {idx}. [{item['status']}] {item['title']} ({item['author']}) {item['genre']}")
             print(f"    - 대출일: {item['loan_date']}")
             print(f"    - 반납일: {item['return_date']}")
             print("-" * 50)
@@ -112,7 +115,7 @@ def print_my_loan_history(current_user: dict) -> None:
 
 if __name__ == "__main__":
     dummy_user = {
-        "current_user": 1,
+        "user_id": 1,
         "email": "dudu1@naver.com",
         "name": "dudu",
         "point": 100
