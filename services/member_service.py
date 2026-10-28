@@ -9,9 +9,32 @@ import string
 import hashlib
 import re
 import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 MEMBERS_FILE = "data/members.json"
 LOAN_FILE="data/loans.json"
+
+
+#관리자 로그인 기능
+def admin_login(pw: str) -> tuple:
+    """
+    .env 파일에 정의된 PASSWORD와 입력받은 비밀번호를 비교하여 관리자 인증 수행
+    - 반환값: (성공 여부 bool, 안내 메시지 str)
+    """
+    # .env 파일에서 PASSWORD 환경변수 가져오기
+    admin_pw = os.getenv("PASSWORD")
+    
+    if not admin_pw:
+        return False, "오류: .env 파일에 관리자 PASSWORD가 설정되어 있지 않습니다."
+    
+    if pw == admin_pw:
+        return True, "관리자 로그인 성공! 관리자 메뉴로 진입합니다."
+    else:
+        return False, "관리자 비밀번호가 일치하지 않습니다."
+    
 
 def _get_members() -> list:
     # json파일에서 회원 데이터를 Member 객체 리스트로 반환합니다.

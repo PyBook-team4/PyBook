@@ -1,4 +1,4 @@
-# admin_member_service.py
+# services/admin_member_service.py
 
 from datetime import datetime
 import hashlib
@@ -37,6 +37,8 @@ def _hash_password(password: str) -> str:
 
 def get_tier_info_by_point(point: int) -> dict:
     """등급 계산 함수"""
+    if point is None or not isinstance(point, (int, float)):
+        point = 0
 
     if point >= 1000:
         tier_name = "master"
@@ -127,7 +129,7 @@ def search_members(keyword: str) -> list:
 
 
 # 관리자 회원 등록
-def admin_register_member(email: str, name: str, phone: str, point: int = 100, interest: list = None) -> tuple:
+def admin_register_member(email: str, name: str, phone: str,point: int = 100, interest: list = None) -> tuple:
     """
     관리자 전용 회원 등록
     - 초기 비밀번호는 회원의 '휴대폰 번호 마지막 4자리'로 자동 설정 후 저장됩니다.
@@ -171,7 +173,7 @@ def admin_register_member(email: str, name: str, phone: str, point: int = 100, i
     members.append(new_member)
     _save_members(members)
 
-    return True, f"회원 등록 성공! (ID: {new_user_id} / 초기 비밀번호: {default_pw})"
+    return True, f"회원 등록 성공! (ID: {email} / 초기 비밀번호: {default_pw})"
 
 
 # 회원 정보 수정
