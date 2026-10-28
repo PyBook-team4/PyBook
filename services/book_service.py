@@ -57,6 +57,9 @@ def initialize_books_if_empty():
     if collected_books:
         save_json(BOOKS_FILE, collected_books)
         print(f"✨ 도서 초기화 완료: 총 {len(collected_books)}권의 도서가 성공적으로 적재되었습니다!")
+
+
+
 '''
 def search_books_by_keyword(keyword: str) -> list:
     """국립중앙도서관 API를 활용한 실시간 키워드 도서 검색"""
