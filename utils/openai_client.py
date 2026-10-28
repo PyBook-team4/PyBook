@@ -1,3 +1,5 @@
+#utils/openai_client.py
+
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -11,7 +13,9 @@ env_path = os.path.join(parent_dir, ".env")
 load_dotenv(dotenv_path=env_path)
 
 # 추적한 절대 경로로 환경변수 로드
-#load_dotenv(dotenv_path=env_path)
+
+
+
 #현재 개발 가이드를 위한 임시 코드 나중에 전체 수정 필요
 class OpenAIClient:
 
@@ -56,6 +60,22 @@ class OpenAIClient:
             return response.choices[0].message.content
         except Exception as e:
             return f"퀴즈 생성 중 API 호출 오류가 발생했습니다: {e}"
+
+
+    # ai 챗봇 기능
+    def generate_chat_response(self, messages):
+        """
+        누적된 대화 기록(messages)을 받아 AI 챗봇의 응답을 반환합니다.
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini", # 챗봇처럼 잦은 요청이 발생하는 기능은 빠르고 가성비 좋은 4o-mini 권장
+                messages=messages,
+                temperature=0.7
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"챗봇 응답 중 API 호출 오류가 발생했습니다: {e}"
 
 
 #아래 부분 주석처리
