@@ -12,10 +12,10 @@ from utils.file_handler import load_json, save_json
 '''
 
 # 1. 대출 등급 및 등급 별 대출 권한 (이름 변경 가능)
-#    ├─ beginner - 대출 가능 권수: 2권 / 대출 기한: 7일  / 달성 필요 점수: 없음(100점 이상)
-#    ├─ runner   - 대출 가능 권수: 4권 / 대출 기한: 14일 / 달성 필요 점수: 없음(200점 이상)
-#    ├─ leader   - 대출 가능 권수: 6권 / 대출 기한: 21일 / 달성 필요 점수: 없음(500점 이상)
-#    └─ master   - 대출 가능 권수: 8권 / 대출 기한: 30일 / 달성 필요 점수: 없음(1000점 이상)
+#    ├─ BRONZE - 대출 가능 권수: 2권 / 대출 기한: 7일  / 달성 필요 점수: 없음(100점 이상)
+#    ├─ SILVER   - 대출 가능 권수: 4권 / 대출 기한: 14일 / 달성 필요 점수: 없음(200점 이상)
+#    ├─ GOLD   - 대출 가능 권수: 6권 / 대출 기한: 21일 / 달성 필요 점수: 없음(500점 이상)
+#    └─ VIP   - 대출 가능 권수: 8권 / 대출 기한: 30일 / 달성 필요 점수: 없음(1000점 이상)
 # 2. 포인트 기준:
 #    ├─ 도서 대출 정상 반납시 포인트 +10
 #    ├─ 평점 기록시, +3
@@ -24,10 +24,10 @@ from utils.file_handler import load_json, save_json
 
 # # 대출 등급 정의
 # LOAN_TIER = {
-#     "beginner" : {"max_books" : 2, "loan_days" : 7},
-#     "runner"   : {"max_books" : 4, "loan_days" : 14},
-#     "leader"   : {"max_books" : 6, "loan_days" : 21},
-#     "master"   : {"max_books" : 8, "loan_days" : 30},
+#     "BRONZE" : {"max_books" : 2, "loan_days" : 7},
+#     "SILVER"   : {"max_books" : 4, "loan_days" : 14},
+#     "GOLD"   : {"max_books" : 6, "loan_days" : 21},
+#     "VIP"   : {"max_books" : 8, "loan_days" : 30},
 # }
 
 
@@ -36,19 +36,19 @@ def get_tier_info_by_point(point: int) -> dict:
     """등급 계산 함수"""
     # 1. 포인트 구간별 티어 판별
     if point >= 1000:
-        tier_name = "master"
+        tier_name = "VIP"
         max_books = 8
         loan_days = 30
     elif point >= 500:
-        tier_name = "leader"
+        tier_name = "GOLD"
         max_books = 6
         loan_days = 21
     elif point >= 200:
-        tier_name = "runner"
+        tier_name = "SILVER"
         max_books = 4
         loan_days = 14
     else:
-        tier_name = "beginner"
+        tier_name = "BRONZE"
         max_books = 2
         loan_days = 7
 

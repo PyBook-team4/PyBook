@@ -1,7 +1,7 @@
 # main.py
 import time
 #from services.book_service import initialize_books_if_empty
-from services import member_service,search_service,loan_service
+from services import member_service,search_service,loan_service,analytics_service
 from services.ai_service import AIChatService
 from services.admin_member_service import (
     get_all_members,
@@ -122,6 +122,7 @@ def run_logged_in_menu(current_user):
                     print("\n 정렬이 완료되었습니다!")
                     time.sleep(1)
                 
+                
                 # 3. 도서 대출하기 연동 부분
                 elif action_choice == '3':
                     try:
@@ -183,6 +184,13 @@ def run_logged_in_menu(current_user):
                 else:
                     print("\n[오류] 올바른 번호를 입력해주세요.")
                     time.sleep(1.5)
+        #명예의 전당
+        elif sub_choice == '4':
+            clear_screen()
+            analytics_service.show_reading_king()
+            input("\n계속하려면 엔터 키를 누르세요...")
+
+        #챗봇 서비스 
         elif sub_choice == '5':
             # 1. 챗봇 진입 애니메이션 실행
             connecting_ai_animation()
@@ -442,7 +450,7 @@ def _handle_book_management():
             isbn = input("ISBN 입력: ").strip()
             
             try:
-                total_stock = int(input("최대 보유량 입력 (1~10): ").strip())
+                total_stock = int(input("총 보유량 입력 (1~10): ").strip())
                 available_stock = int(input("현재 대여 가능 재고 입력: ").strip())
             except ValueError:
                 print("\n숫자만 입력해야 합니다.")

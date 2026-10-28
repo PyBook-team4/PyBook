@@ -41,19 +41,19 @@ def get_tier_info_by_point(point: int) -> dict:
         point = 0
 
     if point >= 1000:
-        tier_name = "master"
+        tier_name = "VIP"
         max_books = 8
         loan_days = 30
     elif point >= 500:
-        tier_name = "leader"
+        tier_name = "GOLD"
         max_books = 6
         loan_days = 21
     elif point >= 200:
-        tier_name = "runner"
+        tier_name = "SILVER"
         max_books = 4
         loan_days = 14
     else:
-        tier_name = "beginner"
+        tier_name = "BRONZE"
         max_books = 2
         loan_days = 7
 
