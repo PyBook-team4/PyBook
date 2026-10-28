@@ -12,23 +12,51 @@ from utils.file_handler import load_json, save_json
 '''
 
 # 1. 대출 등급 및 등급 별 대출 권한 (이름 변경 가능)
-#    ├─ beginner - 대출 가능 권수: 2권 / 대출 기한: 7일  / 달성 필요 점수: 없음(40점 이상)
-#    ├─ runner   - 대출 가능 권수: 4권 / 대출 기한: 14일 / 달성 필요 점수: 없음(100점 이상)
-#    ├─ leader   - 대출 가능 권수: 6권 / 대출 기한: 21일 / 달성 필요 점수: 없음(200점 이상)
-#    └─ master   - 대출 가능 권수: 8권 / 대출 기한: 30일 / 달성 필요 점수: 없음(400점 이상)
+#    ├─ beginner - 대출 가능 권수: 2권 / 대출 기한: 7일  / 달성 필요 점수: 없음(100점 이상)
+#    ├─ runner   - 대출 가능 권수: 4권 / 대출 기한: 14일 / 달성 필요 점수: 없음(200점 이상)
+#    ├─ leader   - 대출 가능 권수: 6권 / 대출 기한: 21일 / 달성 필요 점수: 없음(500점 이상)
+#    └─ master   - 대출 가능 권수: 8권 / 대출 기한: 30일 / 달성 필요 점수: 없음(1000점 이상)
 # 2. 포인트 기준:
 #    ├─ 도서 대출 정상 반납시 포인트 +10
 #    ├─ 평점 기록시, +3
 #    ├─ 리뷰 작성시 +7
 #    └─ 도서 반납 지연시, 지연 1일당 -1 (0 이하로 내려가지 않음)
 
-# 대출 등급 정의
-LOAN_TIER = {
-    "beginner" : {"max_books" : 2, "loan_days" : 7},
-    "runner"   : {"max_books" : 4, "loan_days" : 14},
-    "leader"   : {"max_books" : 6, "loan_days" : 21},
-    "master"   : {"max_books" : 8, "loan_days" : 30},
-}
+# # 대출 등급 정의
+# LOAN_TIER = {
+#     "beginner" : {"max_books" : 2, "loan_days" : 7},
+#     "runner"   : {"max_books" : 4, "loan_days" : 14},
+#     "leader"   : {"max_books" : 6, "loan_days" : 21},
+#     "master"   : {"max_books" : 8, "loan_days" : 30},
+# }
+
+
+# 도서 대출 함수 추가
+def get_tier_info_by_point(point: int) -> dict:
+    """등급 계산 함수"""
+    # 1. 포인트 구간별 티어 판별
+    if point >= 1000:
+        tier_name = "master"
+        max_books = 8
+        loan_days = 30
+    elif point >= 500:
+        tier_name = "leader"
+        max_books = 6
+        loan_days = 21
+    elif point >= 200:
+        tier_name = "runner"
+        max_books = 4
+        loan_days = 14
+    else:
+        tier_name = "beginner"
+        max_books = 2
+        loan_days = 7
+
+    return {
+        "tier": tier_name,
+        "max_books": max_books,
+        "loan_days": loan_days
+    }
 
 
 #도서 대출
@@ -57,10 +85,18 @@ def borrow(user_id: str | int, book_id: int) -> bool:
         return False
 
     # 찾은 회원 정보(등급, 대출 권한) 가져오기
-    user_tier = target_member.get("tier", "beginner") # 유저 등급 
-    tier_info = LOAN_TIER.get(user_tier, LOAN_TIER["beginner"]) # 티어 권한 
-    max_books = tier_info["max_books"] # 등급별 최대 대출 권수
-    loan_days = tier_info["loan_days"] # 등급별 대출 기한 
+    # user_tier = target_member.get("tier", "beginner") # 유저 등급 
+    # tier_info = LOAN_TIER.get(user_tier, LOAN_TIER["beginner"]) # 티어 권한 
+    # max_books = tier_info["max_books"] # 등급별 최대 대출 권수
+    # loan_days = tier_info["loan_days"] # 등급별 대출 기한 
+
+    # 대출 티어 확인 함수 변경으로 업데이트
+    user_point = target_member.get("point", 0)
+    tier_info = get_tier_info_by_point(user_point)
+
+    user_tier = tier_info["tier"]        # 티어 확인
+    max_books = tier_info["max_books"]   # 대출 권수 확인
+    loan_days = tier_info["loan_days"]   # 대출 일수 확인
 
     current_loan_count = 0 # 현재 대출 권수
 
