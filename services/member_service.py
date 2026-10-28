@@ -8,8 +8,33 @@ from animations.animation_effect import clear_screen
 import string
 import hashlib
 import re
+import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 MEMBERS_FILE = "data/members.json"
+LOAN_FILE="data/loans.json"
+
+
+#관리자 로그인 기능
+def admin_login(pw: str) -> tuple:
+    """
+    .env 파일에 정의된 PASSWORD와 입력받은 비밀번호를 비교하여 관리자 인증 수행
+    - 반환값: (성공 여부 bool, 안내 메시지 str)
+    """
+    # .env 파일에서 PASSWORD 환경변수 가져오기
+    admin_pw = os.getenv("PASSWORD")
+    
+    if not admin_pw:
+        return False, "오류: .env 파일에 관리자 PASSWORD가 설정되어 있지 않습니다."
+    
+    if pw == admin_pw:
+        return True, "관리자 로그인 성공! 관리자 메뉴로 진입합니다."
+    else:
+        return False, "관리자 비밀번호가 일치하지 않습니다."
+    
 
 def _get_members() -> list:
     # json파일에서 회원 데이터를 Member 객체 리스트로 반환합니다.
@@ -327,6 +352,25 @@ def withdraw(email: str, pw: str) -> bool:
         print("[오류] 비밀번호가 올바르지 않습니다.")
         return False
 
+    #대출 항목 중 미 반납 항목이 있는지 검사
+    #TODO 현재 withdraw(email,pw)을 받고 있어서 member.json에서 id를 다시 찾아와야됨 코드리팩토링 진행 시 wirhdraw(user_id, pw)이런식으로 변경하고 loans.json에 있는 user_id와 바로 비교
+
+    loans_data=load_json(LOAN_FILE)     #전체 대출 기록 파일 불러오기
+    target_user_id = target_member.user_id  #방금 찾은 회원의 고유 번호(user_id) 저장
+    
+     #any() 함수 사용해서 "대출중" 인 책이 하나라도 있는지 검사
+    has_active_loan = any(
+        # 2. 각 기록들 (loan) 보면서  다음 두 조건을 만족하는 loan이 하나라도 있으면 무조건 True 반환(=has_active_loan은 True가 됨)
+        loan.get("user_id") == target_user_id and loan.get("status") == "대출중"
+        # 1. loans_data에 있는 대출 기록들을 하나씩(loan) 불러오기
+        for loan in loans_data          
+    )
+
+    if has_active_loan:
+        print("\n[오류] 현재 대출 중인 도서가 있어 탈퇴할 수 없습니다. 도서를 먼저 반납해 주세요.")
+        time.sleep(2)
+        return False
+
     # 탈퇴 의사 재확인
     confirm = input("정말로 탈퇴하시겠습니까? (Y/N): ").strip().upper()
     
@@ -501,9 +545,54 @@ def find_pw() -> bool:
     print("\n비밀번호가 성공적으로 재설정되었습니다! 새로운 비밀번호로 로그인해주세요.")
     return True
 
+#TODO main에 마인페이지에 내정보 보여주기로 연동해보기
+def show_member_info(email: str) -> dict | None:
+    """
+    현재 로그인한 회원의 상세 정보를 출력하고 회원 딕셔너리를 반환하는 함수
+    - email: 현재 로그인한 회원의 이메일 (str)
+    - 반환값: 회원 정보 딕셔너리 (찾지 못한 경우 None)
+    """
+    print("\n=== [ 내 정보 확인 ] ===")
 
-    
+    # JSON 파일에서 전체 회원 리스트 불러오기.
+    members = load_json('data/members.json')
 
+    # 전체 회원 리스트에서 하나씩 꺼내며 내 계정 찾기.
+    for member in members:
+        
+        # 이메일이 일치하는 내 회원 딕셔너리
+        if member.get("email") == email:
+            
+            # 비밀번호는 보안을 위해 글자 수만큼 '*'로 가려서 출력하도록 "예외 처리" 추가.
+            pw_length = len(member.get("pw", ""))
+            masked_pw = "*" * pw_length
+
+            # 회원 정보 화면 출력. (값이 비어있을 경우 '미입력'으로 표시)
+            print(f"• 이메일(ID) : {member.get('email')}")
+            print(f"• 비밀번호   : {masked_pw}")
+            print(f"• 이름       : {member.get('name', '미입력')}")
+            print(f"• 전화번호   : {member.get('phone') or '미입력'}")
+            print(f"• 관심분야   : {member.get('interest') or '미입력'}")
+            
+            # 추가 정보 조건부 출력. (json.md의 tier, point, created_at, last_login_date 반영)
+            if "tier" in member:
+                print(f"• 회원등급     : {member.get('tier')}")
+
+            if "point" in member:
+                print(f"• 포인트       : {member.get('point'):,}P")
+
+            if "created_at" in member:
+                print(f"• 가입일       : {member.get('created_at')}")
+
+            if "last_login_date" in member:
+                print(f"• 최근 로그인  : {member.get('last_login_date')}")
+                
+            print("==========================")
+            return member
+
+    # 일단 예외의 경우를 위해 적어놨지만, 필요한지 의문
+    print("❌ 회원 정보를 찾을 수 없습니다.")
+    return None
 
 
 # ==========================================
