@@ -12,6 +12,11 @@ from services.admin_member_service import (
     admin_delete_member,
     get_dormant_members
 )
+from services.admin_book_service import (
+    register_book,
+    book_update,
+    book_delete
+)
 from animations.animation_effect import (
     show_intro_animation, 
     show_goodbye_animation, 
@@ -19,7 +24,7 @@ from animations.animation_effect import (
     connecting_ai_animation,
     typing_effect
 )
-
+from utils.file_handler import load_json
 #가장 아래 부분에 main을 제외한 함수들은 네비게이션 로직입니다. 
 #추후 navigation 관련 함수들은 views/ 폴더 생성 후 옮겨둘수도 있습니다.
 
@@ -255,8 +260,8 @@ def run_admin_menu():
         print("====================================")
         print("         PyBook Admin Menu        ")
         print("====================================")
-        print("1. 전체 회원 목록 조회 및 관리")
-        print("2. 도서 재고 강제 일괄 갱신(CRUD)")
+        print("1. 회원 관리")
+        print("2. 도서 관리")
         print("3. 로그아웃 (메인으로 돌아가기)")
         print("====================================")
         
@@ -265,8 +270,8 @@ def run_admin_menu():
         if admin_choice == '1':
             _handle_member_management()
         elif admin_choice == '2':
-            print("\n도서 재고 갱신 기능 연동 예정...\n")
-            time.sleep(1.5)
+            _handle_book_management()
+            
         elif admin_choice == '3':
             print("\n관리자 계정을 로그아웃합니다.")
             time.sleep(1)
@@ -275,7 +280,7 @@ def run_admin_menu():
             print("\n잘못된 입력입니다. 다시 선택해주세요.\n")
             time.sleep(1)
 
-
+#관리자 회원 관리
 def _handle_member_management():
     """회원 관리 상세 서브 메뉴"""
     while True:
@@ -396,6 +401,102 @@ def _handle_member_management():
         else:
             print("\n잘못된 입력입니다.\n")
             time.sleep(1)
+
+#관리자 도서 관리
+def _handle_book_management():
+    """도서 관리 상세 서브 메뉴"""
+    while True:
+        clear_screen()
+        print("====================================")
+        print("        [도서 관리 및 재고 갱신]        ")
+        print("====================================")
+        print("1. 전체 도서 목록 조회")
+        print("2. 신규 도서 등록")
+        print("3. 도서 정보 수정")
+        print("4. 도서 삭제")
+        print("5. 이전 메뉴로 돌아가기")
+        print("====================================")
+
+        sub_choice = input("원하시는 작업을 선택하세요: ").strip()
+        
+        if sub_choice == '1':
+            clear_screen()
+            print("--- [전체 도서 목록] ---")
+            books = load_json("data/books.json")
+            if not books:
+                print("\n등록된 도서가 없습니다.")
+            else:
+                for b in books:
+                    print(f"ID: {b.get('id')} | 제목: {b.get('title')} | 저자: {b.get('author')} | "
+                          f"출판사: {b.get('publisher')} | 장르: {b.get('genre')} | ISBN: {b.get('isbn')} | "
+                          f"평점: {b.get('rating')} | 재고: {b.get('available_stock')}/{b.get('total_stock')} | 등록일: {b.get('reg_date')}")
+            input("\n계속하려면 엔터 키를 누르세요...")
+
+        elif sub_choice == '2':
+            clear_screen()
+            print("--- [신규 도서 등록] ---")
+            title = input("도서 제목 입력: ").strip()
+            author = input("저자 입력: ").strip()
+            publisher = input("출판사 입력: ").strip()
+            genre = input("장르 입력: ").strip()
+            isbn = input("ISBN 입력: ").strip()
+            
+            try:
+                total_stock = int(input("최대 보유량 입력 (1~10): ").strip())
+                available_stock = int(input("현재 대여 가능 재고 입력: ").strip())
+            except ValueError:
+                print("\n숫자만 입력해야 합니다.")
+                time.sleep(1.5)
+                continue
+            
+            success = register_book(title, author, publisher, genre, isbn, total_stock, available_stock)
+            time.sleep(1.5)
+
+        elif sub_choice == '3':
+            clear_screen()
+            print("--- [도서 정보 수정] ---")
+            try:
+                book_id = int(input("수정할 도서의 고유 ID 입력: ").strip())
+            except ValueError:
+                print("\n올바른 숫자를 입력해주세요.")
+                time.sleep(1.5)
+                continue
+            
+            print("\n[수정 항목 선택]")
+            print("1: 제목, 2: 저자, 3: 출판사, 4: ISBN, 5: 장르, 6: 평점, 7: 최대 재고량, 8: 대여 가능 재고")
+            try:
+                field_choice = int(input("수정할 항목 번호 입력 (1-8): ").strip())
+            except ValueError:
+                print("\n올바른 숫자를 입력해주세요.")
+                time.sleep(1.5)
+                continue
+            
+            new_value = input("변경할 값을 입력하세요: ")
+            book_update(book_id, field_choice, new_value)
+            time.sleep(2)
+
+        elif sub_choice == '4':
+            clear_screen()
+            print("--- [도서 삭제] ---")
+            try:
+                book_id = int(input("삭제할 도서의 고유 ID 입력: ").strip())
+            except ValueError:
+                print("\n올바른 숫자를 입력해주세요.")
+                time.sleep(1.5)
+                continue
+            
+            confirm = input(f"정말 도서(ID: {book_id})를 삭제하시겠습니까? (y/n): ").strip().lower()
+            if confirm == 'y':
+                book_delete(book_id)
+            else:
+                print("\n삭제가 취소되었습니다.")
+            time.sleep(2)
+        elif sub_choice == '5':
+            break
+        else:
+            print("\n잘못된 입력입니다.\n")
+            time.sleep(1)
+
 
 def main():
     # 1. 프로그램 실행 시 최초 1회 도서 100권 자동 적재 체크

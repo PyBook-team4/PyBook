@@ -48,21 +48,6 @@ def _save_members(members: list[Member]) -> None:
     data = [member.to_dict() for member in members]
     save_json(MEMBERS_FILE, data)
 
-# 전체 회원 목록 조회 (관리자 메뉴)
-def get_all_members() -> list[Member]:
-    members = _get_members()
-
-    for member in members:
-        print(f"user_id: {member.user_id}")
-        print(f"이메일(아이디): {member.email}")
-        print(f"이름: {member.name}")
-        print(f"전화번호: {member.phone}")
-        print(f"포인트: {member.point}")
-        print(f"마지막 로그인 날: {member.last_login}")
-        print(f"등록일: {member.created_at}")
-        print() # 회원 사이마다 빈 줄 추가
-    
-
 # 비밀번호 해싱
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
