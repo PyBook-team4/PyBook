@@ -10,6 +10,7 @@ def main():
     # 오프닝 애니메이션 실행
     show_intro_animation()
     
+    
     while True:
         clear_screen()
         print("====================================")

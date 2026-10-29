@@ -1,10 +1,11 @@
 # services/loan_service.py
+import re
 from datetime import datetime, timedelta
 
 from models.loan import Loan
 from models.record import Record
 from utils.file_handler import load_json, save_json
-
+from utils.openai_client import OpenAIClient
 '''
 해당 파일 구현 시 members,books,records 부분을 모두 접근해야 하기 때문에 난이도가 높을 수 있습니다.
 우선 코드 구현 후 테스트 할 경우 books.json에 더미데이터 한개 생성 후 테스트하면 됩니다.
@@ -19,8 +20,10 @@ from utils.file_handler import load_json, save_json
 # 2. 포인트 기준:
 #    ├─ 도서 대출 정상 반납시 포인트 +10
 #    ├─ 평점 기록시, +3
-#    ├─ 리뷰 작성시 +7
+#    ├─ 리뷰 작성시 +3
+#    ├─ 리뷰 작성 후 도서 퀴즈 정답시, +4
 #    └─ 도서 반납 지연시, 지연 1일당 -1 (0 이하로 내려가지 않음)
+
 
 # # 대출 등급 정의
 # LOAN_TIER = {
@@ -30,6 +33,9 @@ from utils.file_handler import load_json, save_json
 #     "VIP"   : {"max_books" : 8, "loan_days" : 30},
 # }
 
+REVIEW_MIN_LENGTH = 20   # 리뷰 포인트를 받기 위한 최소 글자 수
+REVIEW_POINT = 3         # 리뷰 작성 포인트
+QUIZ_POINT = 4           # 도서 퀴즈 정답 포인트
 
 # 도서 대출 함수 추가
 def get_tier_info_by_point(point: int) -> dict:
@@ -37,7 +43,7 @@ def get_tier_info_by_point(point: int) -> dict:
     # 0. 포인트 값이 없거나 숫자가 아니면 0점 처리
     if point is None or not isinstance(point,(int,float)):
         point=0
-        
+
     # 1. 포인트 구간별 티어 판별
     if point >= 1000:
         tier_name = "VIP"
@@ -191,10 +197,14 @@ def return_book(loan_id: int) -> bool:
             check_loan["status"] = "반납완료" # 대출 상태 변경
             check_loan["return_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 반납일 업데이트
 
+
+            book_title=None                                # 퀴즈 출제용 도서 제목
             # 해당 도서 재고 복구
             for book in books_data:                             # 책 정보에서 대출한 책 찾기
+                
                 if book.get("id") == check_loan.get("book_id"): # 대출한 책과 일치하는 책 찾기
                     book["available_stock"] += 1                # 재고 복구(+1)
+                    book_title = book.get("title")
                     break
 
             # 반납 보상 포인트 지급 (예: 반납 시 10 포인트 적립)
@@ -223,14 +233,30 @@ def return_book(loan_id: int) -> bool:
                     target_member["point"] += 3
                 print(f"평점 {rating}점이 등록되었습니다. (+3 포인트)")
 
-            # 리뷰 작성 및 포인트 지급 (7점 추가)
+                        # 리뷰 작성 및 포인트 지급 (20자 이상 작성 시 3점 추가)
             review = ""
-            review_input = input("도서 감상평(리뷰)을 남기시겠습니까? (엔터 시 건너뜀): ").strip()
-            if review_input:
+            while True:
+                review_input = input(f"도서 감상평(리뷰)을 남기시겠습니까? ({REVIEW_MIN_LENGTH}자 이상 / 엔터 시 건너뜀): ").strip()
+                if not review_input:
+                    break
+                if len(review_input) < REVIEW_MIN_LENGTH:
+                    print(f"[안내] 리뷰는 {REVIEW_MIN_LENGTH}자 이상 작성해주세요. (현재 {len(review_input)}자)")
+                    continue
                 review = review_input
                 if target_member:
-                    target_member["point"] += 7
-                print("리뷰 작성이 완료되었습니다. (+7 포인트)")
+                    target_member["point"] += REVIEW_POINT
+                print(f"리뷰 작성이 완료되었습니다. (+{REVIEW_POINT} 포인트)")
+                break
+
+            # 리뷰를 남긴 경우에만 도서 퀴즈 도전 (정답 시 4점 추가)
+            if review and book_title:
+                if input(f"\nai 기반 도서 퀴즈에 도전하시겠습니까? (정답 시 +{QUIZ_POINT} 포인트) (y/n): ").strip().lower() == 'y':
+                    if _play_book_quiz(book_title):
+                        if target_member:
+                            target_member["point"] += QUIZ_POINT
+                        print(f"퀴즈 정답 보상이 지급되었습니다. (+{QUIZ_POINT} 포인트)")
+
+            
 
             # 평점이나, 리뷰 중 하나라도 작성했다면, records.json에 기록
             if rating is not None or review:
@@ -258,6 +284,46 @@ def return_book(loan_id: int) -> bool:
         
     print("일치하는 대출 기록(loan_id)을 찾을 수 없습니다.")
     return False
+
+def _play_book_quiz(book_title: str) -> bool:
+    """AI가 만든 도서 퀴즈 1문제를 풀고, 정답이면 True 반환 (퀴즈를 만들 수 없으면 False)"""
+    # openai 패키지나 API 키가 없어도 반납은 정상 처리되도록 퀴즈를 낼 때만 불러옴
+    try:
+        from utils.openai_client import OpenAIClient
+        client = OpenAIClient()
+    except (ImportError, ValueError) as e:
+        print(f"\n[안내] 퀴즈를 불러올 수 없어 건너뜁니다. ({e})")
+        return False
+
+    print("\nAI가 퀴즈를 만드는 중입니다...")
+    quiz = client.generate_book_quiz(book_title)
+
+    # 응답 형식: [문제] ... 1.~4. 보기 ... [정답] 번호 [해설] ...
+    if "[정답]" not in quiz or "[해설]" not in quiz:
+        print("\n[안내] 퀴즈를 만들지 못해 건너뜁니다.")
+        return False
+    question_part, rest = quiz.split("[정답]", 1)
+    answer_part, explanation = rest.split("[해설]", 1)
+
+    answer_match = re.search(r"[1-4]", answer_part)
+    if not answer_match:
+        print("\n[안내] 퀴즈 정답 형식이 올바르지 않아 건너뜁니다.")
+        return False
+    correct_answer = answer_match.group()
+
+    print("\n" + question_part.strip())
+    user_answer = input("\n정답 번호를 입력하세요 (1~4): ").strip().rstrip("번")
+
+    if user_answer == correct_answer:
+        print("\n정답입니다!")
+        is_correct = True
+    else:
+        print(f"\n아쉽지만 오답입니다. (정답: {correct_answer}번)")
+        is_correct = False
+    print(f"해설: {explanation.strip()}")
+    return is_correct
+
+
 
 
 def get_user_active_loans(user_id: str | int) -> list:

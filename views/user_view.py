@@ -29,7 +29,7 @@ def run_logged_in_menu(current_user):
         print("9. 마이페이지")
         print("0. 로그아웃")
         print("====================================")
-     
+   
         sub_choice = input("메뉴를 선택하세요: ").strip()
 
         # 1. 도서 검색 및 대출하기
@@ -171,9 +171,10 @@ def _handle_book_return(current_user):
         if 1 <= idx_num <= len(active_loans):
             loan_id = active_loans[idx_num - 1]["loan_id"]
             loan_service.return_book(loan_id)
+            input("\n계속하려면 엔터 키를 누르세요... ")
         else:
             print("\n[오류] 올바른 번호를 입력해주세요.")
-        time.sleep(2)
+            time.sleep(2)
 
 
 
@@ -232,6 +233,13 @@ def _handle_my_page(current_user) -> bool:
             print("\n[오류] 올바른 번호를 입력해주세요.\n")
             time.sleep(1.5)
 
+def _rating_to_stars(rating) -> str:
+    """평점을 반올림한 별 5개로 표시 (예: 4 -> ★★★★☆, 4.5 -> ★★★★★)"""
+    if rating is None:
+        return "평점 없음"
+    filled = max(0, min(5, int(rating + 0.5)))   # 반올림 (4.5 -> 5개), 0~5개 범위로 제한
+    return "★" * filled + "☆" * (5 - filled)
+
 
 def _show_reading_timeline(current_user):
     """나의 독서 연대기 출력 (반납 완료한 도서를 월별로 묶어서 표시)"""
@@ -254,7 +262,7 @@ def _show_reading_timeline(current_user):
             year, mon = (month.split("-") + ["", ""])[:2]
             print(f"\n[{year}년 {mon}월]")
 
-        rating_str = f"★{item['rating']}" if item["rating"] is not None else "평점 없음"
+        rating_str = _rating_to_stars(item["rating"])
         print(f"  • {returned_at[5:10]}  『{item['title']}』 - {item['author']} ({item['genre']}) | {rating_str}")
         if item["review"]:
             print(f"      └ \"{item['review']}\"")
@@ -306,3 +314,12 @@ def _show_current_loans(current_user):
 
         print(f"{idx}. 『{loan['title']}』 - {loan['author']}")
         print(f"    대출일: {(loan['loan_date'] or '')[:10]} | 반납기한: {(loan['due_date'] or '')[:10]} ({d_day})")
+
+
+        #TODO
+        """
+        1. 관심있는 키워드랑 같은 장르중에서 평점순으로 n개 
+        2. 키워드 따와가지고 openai api             #가지고 있지 않은 도서도 추천
+        3. 국립중앙도서관 api 키워드 기반으로 띄워주기    #가지고 있지 않은 도서도 추천
+        
+        """

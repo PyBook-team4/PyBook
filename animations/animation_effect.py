@@ -116,3 +116,6 @@ def connecting_ai_animation():
     typing_effect("연결 완료! AI 사서를 호출합니다.", speed=0.04)
     print("="*40 + "\n")
     time.sleep(0.5)
+
+
+#TODO 개발자들 엔딩 크래딧
