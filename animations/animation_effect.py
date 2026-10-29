@@ -91,7 +91,7 @@ def typing_effect(text, speed=0.03):
 
 def loading_spinner(text="로딩 중...", duration=2.0):
     """
-    터미널용 텍스트 스피너(| / - \) 애니메이션입니다.
+    터미널용 텍스트 스피너(| / - \\) 애니메이션입니다.
     """
     spinner = itertools.cycle(['|', '/', '-', '\\'])
     end_time = time.time() + duration

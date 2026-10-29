@@ -16,3 +16,5 @@ pytest
 
 dotenv
 
+#그래프 시각화를 위한 라이브러리
+matplotlib

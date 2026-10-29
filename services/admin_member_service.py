@@ -1,39 +1,15 @@
 # services/admin_member_service.py
 
 from datetime import datetime
-import hashlib
-import re
-import string
 
 from models.member import Member
-from utils.file_handler import load_json, save_json
+from utils.file_handler import load_json
 from services.loan_service import get_tier_info_by_point
-from animations.animation_effect import clear_screen
+# 회원 데이터 읽기/저장, 비밀번호 해싱은 member_service의 함수를 함께 사용 (중복 제거)
+from services.member_service import is_valid_email, _get_members, _save_members, _hash_password
 
 # 데이터 파일 경로 정의
-MEMBERS_FILE = "data/members.json"
 LOANS_FILE = "data/loans.json"
-
-
-# [공통/유틸리티 함수]
-
-def _get_members() -> list:
-    """JSON 파일에서 회원 데이터를 Member 로 반환"""
-    data = load_json(MEMBERS_FILE)
-    if isinstance(data, list):
-        return [Member.from_dict(item) for item in data]
-    return []
-
-
-def _save_members(members: list) -> None:
-    """Member 를 딕셔너리로 JSON 파일에 저장"""
-    data = [member.to_dict() for member in members]
-    save_json(MEMBERS_FILE, data)
-
-
-def _hash_password(password: str) -> str:
-    """비밀번호를 SHA-256 방식으로 안전하게 암호화(해싱)합니다."""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 
 # 회원 전체 목록 조회
@@ -109,23 +85,31 @@ def admin_register_member(email: str, name: str, phone: str,point: int = 100, in
     """
     members = _get_members()
 
-    # 1. 이메일 중복 검사
+    #관리자가 회원 등록하는 부분도 이메일 형식 검사 추가
+    if not is_valid_email(email):
+        return False,"이메일 형식이 올바르지 않습니다."
+
+    # 2. 이메일 중복 검사
     if any(m.email == email for m in members):
         return False, "이미 사용 중인 이메일 계정입니다."
-
-    # 2. 연락처 유효성 검사 (숫자 11자리 기준)
+    
+    # 3. 이름 검사 항목 추가 
+    if not name.strip():
+        return False,"이름은 필수 입력 항목입니다."
+    
+    # 4. 연락처 유효성 검사 (숫자 11자리 기준)
     clean_phone = phone.replace("-", "").replace(" ", "")
     if len(clean_phone) != 11 or not clean_phone.isdigit():
         return False, "연락처는 11자리 숫자여야 합니다. (예: 01012345678)"
 
-    # 3. 비밀번호 자동 생성: 휴대폰 뒷 4자리 -> 해싱
+    # 5. 비밀번호 자동 생성: 휴대폰 뒷 4자리 -> 해싱
     default_pw = clean_phone[-4:]
     hashed_pw = _hash_password(default_pw)
 
-    # 4. 신규 user_id 채번 (기존 최대값 + 1)
+    # 6. 신규 user_id 채번 (기존 최대값 + 1)
     new_user_id = max([getattr(m, 'user_id', 0) for m in members], default=0) + 1
 
-    # 5. 새 Member 객체 생성
+    # 7. 새 Member 객체 생성
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     new_member = Member(
         user_id=new_user_id,
@@ -141,7 +125,7 @@ def admin_register_member(email: str, name: str, phone: str,point: int = 100, in
         last_login=None
     )
 
-    # 6. 리스트 추가 및 파일 저장
+    # 8. 리스트 추가 및 파일 저장
     members.append(new_member)
     _save_members(members)
 
@@ -162,8 +146,10 @@ def admin_update_member(user_id: int, new_email: str = None, reset_pw_to_phone_l
     if not target_member:
         return False, f"회원 고유번호(ID: {user_id})를 찾을 수 없습니다."
 
-    # 1. 이메일 수정 (중복 검사)
+    # 1. 이메일 수정 (중복 검사+형식 검사)
     if new_email and new_email != target_member.email:
+        if not is_valid_email(new_email):
+            return False,"이메일 형식이 올바르지 않습니다."
         if any(m.email == new_email and m.user_id != user_id for m in members):
             return False, "이미 다른 회원이 사용 중인 이메일입니다."
         target_member.email = new_email

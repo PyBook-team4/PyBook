@@ -2,6 +2,8 @@
 from datetime import datetime
 from models.book import Book
 from utils.file_handler import load_json, save_json
+
+RECORDS_FILE="data/records.json"
 # 관리자 메뉴
 # 새로운 도서 등록
 def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,total_stock: int, available_stock:int) -> bool:
@@ -9,16 +11,30 @@ def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,
     # 도서 목록 불러오기
     books = load_json("data/books.json")
 
-    # 1. 도서 목록 중복 검사 # 제목으로 비교한 뒤 이미 존재한다면 False 반환
+    # 1. 입력값 앞뒤 공백 제거 (비교와 저장에 같은 값을 사용하기 위해)
+    title = title.strip()
+    author = author.strip()
+    publisher = publisher.strip()
+    genre = genre.strip()
+    isbn = isbn.strip()
+
+    # 2. 필수 항목 누락 검사 # 하나라도 비어있으면 False 반환
+    required_fields = {"제목": title, "저자": author, "출판사": publisher, "장르": genre, "ISBN": isbn}
+    empty_fields = [name for name, value in required_fields.items() if not value]
+    if empty_fields:
+        print(f"다음 항목을 입력해주세요: {', '.join(empty_fields)}")
+        return False
+
+    # 3. 도서 목록 중복 검사 # 제목으로 비교한 뒤 이미 존재한다면 False 반환
     for search_book in books:
-            if search_book["title"] == title.strip():
-                print("이미 등록된 도서입니다.")
-                return False
-    #TODO 항목 하나라도 안들어오면 return False
+        if search_book["title"] == title.strip():
+            print("이미 등록된 도서입니다.")
+            return False
+    
     if title=="":
         print("도서를 입력하세요")
         return False
-    # 2. 도서 id 생성 
+    # 4. 도서 id 생성 
     book_ids = [book["id"] for book in books] # 도서 목록에서 id만 추출
     
     if book_ids:  # id가 있다면 최대값에 +1 / 없다면 1을 도서 id로 지정
@@ -26,21 +42,21 @@ def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,
     else:
         new_book_id = 1
 
-    # 3. total_stock 검증 # 0 ~ 10의 범위만 가능 
+    # 5. total_stock 검증 # 1 ~ 10의 범위만 가능 
     if total_stock < 1 or total_stock > 10:
-        print("도서 최대 보유량은 0 ~ 10의 범위 내로 입력해주세요.")
+        print("도서 최대 보유량은 1 ~ 10의 범위 내로 입력해주세요.")
         return False
 
-    # 4. available_stock 검증 # 0보다 작거나 total_Stock보다 클 수 없음
+    # 6. available_stock 검증 # 0보다 작거나 total_Stock보다 클 수 없음
     if available_stock < 0 or available_stock > total_stock:
         print("현재 도서 재고는 음수이거나 최대 보유량을 넘을 수 없습니다.")
         return False
 
-    # 5. 새로운 도서 등록일 생성
+    # 7. 새로운 도서 등록일 생성
     book_datetime = datetime.now()
     book_date = book_datetime.strftime("%Y-%m-%d")
 
-    # 6. 새로운 객체 생성 및 추가
+    # 8. 새로운 객체 생성 및 추가
     new_book = Book(
         id=new_book_id,
         title=title,
@@ -56,7 +72,7 @@ def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,
 
     books.append(new_book.to_dict())
     
-    # 7. json 파일 저장 하고 성공 메세지 출력
+    # 9. json 파일 저장 하고 성공 메세지 출력
     save_json("data/books.json", books) 
     print(f"'{title}' 도서가 성공적으로 등록되었습니다.")
     return True
@@ -203,3 +219,50 @@ def book_update(book_id: int, field_choice: int, new_value) -> bool:
     save_json("data/books.json", books) 
     print(f"id: {book_id} 도서의 {field}가 수정되었습니다.")
     return True
+
+
+# [관리자 전용] 독서 기록 및 평점/리뷰 관리
+def get_all_book_records() -> list:
+    """전체 독서 기록(평점/리뷰) 목록 조회 (관리자가 보기 쉽게 도서 제목을 붙여서 반환)"""
+    records = load_json(RECORDS_FILE)
+    books = load_json("data/books.json")
+
+    # book_id -> 도서 제목 매핑
+    book_title_map = {b.get("id"): b.get("title") for b in books}
+
+    result = []
+    for r in records:
+        r_copy = r.copy()
+        r_copy["book_title"] = book_title_map.get(r.get("book_id"), "알 수 없는 도서")
+        result.append(r_copy)
+    return result
+
+
+def admin_update_review(record_id: int, new_rating: float = None, new_review: str = None) -> tuple:
+    """
+    [관리자 전용] 특정 독서 기록(record_id)의 평점 및 리뷰 내용 수정
+    - new_rating: 새 평점 (0.0 ~ 5.0), None이면 수정하지 않음
+    - new_review: 새 리뷰 내용, None이면 수정하지 않음
+    - 반환값: (성공여부 bool, 안내메시지 str)
+    """
+    if new_rating is None and new_review is None:
+        return False, "수정할 항목이 없습니다."
+
+    records = load_json(RECORDS_FILE)
+    target = next((r for r in records if r.get("record_id") == record_id), None)
+
+    if not target:
+        return False, f"기록 ID {record_id}번에 해당하는 독서 기록을 찾을 수 없습니다."
+
+    # 1. 평점 수정
+    if new_rating is not None:
+        if not 0.0 <= new_rating <= 5.0:
+            return False, "평점은 0.0 ~ 5.0 사이의 숫자여야 합니다."
+        target["rating"] = new_rating
+
+    # 2. 리뷰 내용 수정
+    if new_review is not None:
+        target["review"] = new_review.strip()
+
+    save_json(RECORDS_FILE, records)
+    return True, f"기록 ID {record_id}번의 정보가 성공적으로 수정되었습니다."

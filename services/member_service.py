@@ -2,6 +2,7 @@
 from datetime import datetime
 from models.member import Member
 from utils.file_handler import load_json, save_json
+from services.loan_service import get_tier_info_by_point
 #콘솔창 구현 한것중에 clear_screen해야되는 부분에 적용 ex) 회원정보 수정부분 
 from animations.animation_effect import clear_screen
 # python -m services.member_service
@@ -300,7 +301,7 @@ def signup() -> bool:
     return True
 
 #💡 로그인 💡
-def login(email: str, pw: str) -> dict | None:
+def login(email: str, pw: str) -> tuple[bool,dict | None]:
     members = _get_members()
     #비밀번호 해싱
     hashed_pw = _hash_password(pw)
@@ -319,10 +320,10 @@ def login(email: str, pw: str) -> dict | None:
                 return True, member.to_dict()
             else:
                 print("비밀번호가 올바르지 않습니다.")
-                return None
+                return False,None
             
     print("존재하지 않는 이메일 계정입니다.")
-    return None
+    return False,None
 
 # user_id로 최신 회원 정보 조회
 # 일반 user가 로그인 후 메인화면에서 회원정보 계속 최신화시키기 위한 (포인트 변경,개인정보 변경 등) 함수입니다.
@@ -586,29 +587,29 @@ def show_member_info(email: str) -> dict | None:
         # 이메일이 일치하는 내 회원 딕셔너리
         if member.get("email") == email:
             
-            # 비밀번호는 보안을 위해 글자 수만큼 '*'로 가려서 출력하도록 "예외 처리" 추가.
-            pw_length = len(member.get("pw", ""))
-            masked_pw = "*" * pw_length
-
-            # 회원 정보 화면 출력. (값이 비어있을 경우 '미입력'으로 표시)
-            print(f"• 이메일(ID) : {member.get('email')}")
-            print(f"• 비밀번호   : {masked_pw}")
-            print(f"• 이름       : {member.get('name', '미입력')}")
-            print(f"• 전화번호   : {member.get('phone') or '미입력'}")
-            print(f"• 관심분야   : {member.get('interest') or '미입력'}")
+            # 비밀번호는 보안을 위해 '*'로 가려서 출력하도록 "예외 처리" 추가.
             
-            # 추가 정보 조건부 출력. (json.md의 tier, point, created_at, last_login_date 반영)
-            if "tier" in member:
-                print(f"• 회원등급     : {member.get('tier')}")
+            masked_pw = "********"
+            # 관심분야는 리스트이므로 쉼표로 이어서 표시
+            interest = member.get("interest")
+            interest_str = ", ".join(interest) if isinstance(interest, list) and interest else "미입력"
 
-            if "point" in member:
-                print(f"• 포인트       : {member.get('point'):,}P")
+            # 포인트가 없으면 0으로 처리하고, 등급은 포인트로 계산 (members.json에는 tier가 저장되지 않음)
+            point = member.get("point") or 0
+            tier = get_tier_info_by_point(point)["tier"]
 
-            if "created_at" in member:
-                print(f"• 가입일       : {member.get('created_at')}")
 
-            if "last_login_date" in member:
-                print(f"• 최근 로그인  : {member.get('last_login_date')}")
+            
+            # 회원 정보 화면 출력. (값이 비어있을 경우 '미입력'으로 표시)
+            print(f"• 이메일(ID)   : {member.get('email')}")
+            print(f"• 비밀번호     : {masked_pw}")
+            print(f"• 이름         : {member.get('name') or '미입력'}")
+            print(f"• 전화번호     : {member.get('phone') or '미입력'}")
+            print(f"• 관심분야     : {interest_str}")
+            print(f"• 회원등급     : {tier}")
+            print(f"• 포인트       : {point:,}P")
+            print(f"• 가입일       : {member.get('created_at') or '미입력'}")
+            print(f"• 최근 로그인  : {member.get('last_login') or '기록 없음'}")
                 
             print("==========================")
             return member
