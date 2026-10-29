@@ -7,6 +7,7 @@ import string
 
 from models.member import Member
 from utils.file_handler import load_json, save_json
+from services.loan_service import get_tier_info_by_point
 from animations.animation_effect import clear_screen
 
 # 데이터 파일 경로 정의
@@ -33,35 +34,6 @@ def _save_members(members: list) -> None:
 def _hash_password(password: str) -> str:
     """비밀번호를 SHA-256 방식으로 안전하게 암호화(해싱)합니다."""
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
-
-
-def get_tier_info_by_point(point: int) -> dict:
-    """등급 계산 함수"""
-    if point is None or not isinstance(point, (int, float)):
-        point = 0
-
-    if point >= 1000:
-        tier_name = "VIP"
-        max_books = 8
-        loan_days = 30
-    elif point >= 500:
-        tier_name = "GOLD"
-        max_books = 6
-        loan_days = 21
-    elif point >= 200:
-        tier_name = "SILVER"
-        max_books = 4
-        loan_days = 14
-    else:
-        tier_name = "BRONZE"
-        max_books = 2
-        loan_days = 7
-
-    return {
-        "tier": tier_name,
-        "max_books": max_books,
-        "loan_days": loan_days
-    }
 
 
 # 회원 전체 목록 조회

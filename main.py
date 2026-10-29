@@ -1,5 +1,112 @@
 # main.py
 import time
+from services import member_service
+from animations.animation_effect import show_intro_animation, show_goodbye_animation, clear_screen
+from views.user_view import run_logged_in_menu
+from views.admin_view import run_admin_menu
+
+#TODO 모든 비밀번호에 파이썬 기본 모듈인 getpass의 getpass()를 써서 입력한 비밀번호가 콘솔창에 노출되지 않도록 할까?
+def main():
+    # 오프닝 애니메이션 실행
+    show_intro_animation()
+    
+    while True:
+        clear_screen()
+        print("====================================")
+        print("        PyBook Main Menu        ")
+        print("====================================")
+        print("1. 회원가입")
+        print("2. 로그인")
+        print("3. 관리자 로그인")
+        print("4. 프로그램 종료")
+        print("====================================")
+        
+        choice = input("원하시는 메뉴 번호를 입력하세요: ").strip()
+
+        # 1. 회원가입
+        if choice == '1':
+            clear_screen()
+            print("====================================")
+            print("            회원가입 화면           ")
+            print("====================================")
+            member_service.signup()
+            time.sleep(2)
+
+        # 2. 로그인
+        elif choice == '2':
+            while True:
+                clear_screen()
+                print("====================================")
+                print("            로그인 화면             ")
+                print("====================================")
+                print("1. 로그인 하기")
+                print("2. 비밀번호 찾기")
+                print("3. 뒤로 가기 (메인 메뉴)")
+                print("====================================")
+                
+                login_choice = input("원하시는 메뉴 번호를 입력하세요: ").strip()
+                
+                if login_choice == '1':
+                    clear_screen()
+                    print("====================================")
+                    print("            일반 로그인             ")
+                    print("====================================")
+                    email = input("아이디 (이메일): ").strip()
+                    pw = input("비밀번호: ").strip()
+                    
+                    result = member_service.login(email=email, pw=pw)
+                    success, user_data = result if result else (False, None)
+                    time.sleep(1.5)
+
+                    if success:
+                        run_logged_in_menu(user_data)
+                    break
+
+                elif login_choice == '2':
+                    clear_screen()
+                    member_service.find_pw()
+                    print("\n잠시 후 로그인 화면으로 돌아갑니다...")
+                    time.sleep(2)
+
+                elif login_choice == '3':
+                    print("\n메인 메뉴로 돌아갑니다.")
+                    time.sleep(1)
+                    break
+                else:
+                    print("\n[오류] 올바른 메뉴 번호를 입력해주세요.\n")
+                    time.sleep(1.5)
+        
+        # 3. 관리자 로그인
+        elif choice == '3':
+            clear_screen()
+            print("====================================")
+            print("           관리자 로그인            ")
+            print("====================================")
+            pw = input("관리자 비밀번호를 입력하세요: ")
+            
+            success, message = member_service.admin_login(pw=pw)
+            print(f"\n{message}")
+            time.sleep(1.5)
+            
+            if success:
+                run_admin_menu()
+
+        # 4. 프로그램 종료
+        elif choice == '4':
+            show_goodbye_animation()
+            break
+        
+        else:
+            print("\n[오류] 올바른 메뉴 번호를 입력해주세요.\n")
+            time.sleep(1)
+
+if __name__ == "__main__":
+    main()
+
+''''
+
+# main.py
+import time
 #from services.book_service import initialize_books_if_empty
 from services import member_service,search_service,loan_service,analytics_service
 from services.ai_service import AIChatService
@@ -40,17 +147,14 @@ def run_logged_in_menu(current_user):
         print("1. 도서 검색 및 대출하기")
         print("2. 도서 반납하기")
 
-
-   
-        print("4. 명예의 전당")  #이름을 아직 못정함 이 부분들어가면 명예의전당(다독왕),도서 추천(베스트셀러)등 넣는게나을수도?
+        print("3.도서 추천(베스트셀러)") #TODO
+        print("4. 명예의 전당")  #이름을 아직 못정함 명예의전당(다독왕)
         print("5. PyBook chat bot")
+        print("\n")
         print("7. 마이페이지")   #마이페이지안에  나의 대출 이력 조회(나의 독서 연대기)등을 넣는게 나을수도..?
-
-
-
         print("8. 회원 정보 수정")
-        print("9. 로그아웃")
-        print("0. 회원탈퇴")
+        print("9. 로그아웃")        #9. 마이페이지- 회원 정보 수정,회원탈퇴, 대출 이력 조회, 
+        print("0. 회원탈퇴")       #0. 로그아웃
         print("====================================")
      
         
@@ -230,7 +334,7 @@ def run_admin_menu():
         print("         PyBook Admin Menu        ")
         print("====================================")
         print("1. 전체 회원 목록 조회")
-        print("2. 도서 재고 강제 일괄 갱신(CRUD)")
+        print("2. 도서 재고 조회")
         print("3. 로그아웃 (메인으로 돌아가기)")
         print("====================================")
         
@@ -631,3 +735,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+    '''

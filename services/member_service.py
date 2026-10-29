@@ -324,6 +324,13 @@ def login(email: str, pw: str) -> dict | None:
     print("존재하지 않는 이메일 계정입니다.")
     return None
 
+# user_id로 최신 회원 정보 조회
+# 일반 user가 로그인 후 메인화면에서 회원정보 계속 최신화시키기 위한 (포인트 변경,개인정보 변경 등) 함수입니다.
+def get_member_by_id(user_id: int) -> dict | None:
+    """user_id와 일치하는 회원의 최신 정보를 딕셔너리로 반환합니다. (없으면 None)"""
+    members = _get_members()
+    target_member = next((m for m in members if m.user_id == user_id), None)
+    return target_member.to_dict() if target_member else None
 
 
 #💡 로그아웃 💡
@@ -336,7 +343,7 @@ def logout(email: str) -> bool:
 #💡 회원탈퇴 💡
 #구현 시 정말 탈퇴하시겠습니까? 같은 문자 출력후 비밀번호 입력하면 json파일에서 회원정보 삭제하는식으로 탈퇴시키면됩니다.
 #회원 탈퇴 후에는 홈화면으로 이동하게됩니다.
-def withdraw(email: str, pw: str) -> bool:
+def withdraw(email: str) -> bool:
 
     members = _get_members()
     # 이메일과 일치하는 회원 찾기
@@ -348,8 +355,10 @@ def withdraw(email: str, pw: str) -> bool:
         return False
 
     # 비밀번호 검증
-    if target_member.pw != pw:
+    input_pw=input("본인 확인을 위해 비밀번호를 입력하세요: ").strip()
+    if target_member.pw!=_hash_password(input_pw):
         print("[오류] 비밀번호가 올바르지 않습니다.")
+        time.sleep(1.5)
         return False
 
     #대출 항목 중 미 반납 항목이 있는지 검사
@@ -386,6 +395,7 @@ def withdraw(email: str, pw: str) -> bool:
         return False
 
 
+
 #회원 정보 수정은 우선 함수 한개로 구성해놓았는데 
 #구현 하실 때 비밀번호 재설정과 phone,interest,name 부분 수정으로 함수 두개로 나눠서 구현하셔도 됩니다.
 
@@ -414,6 +424,7 @@ def update(email: str = "", **kwargs)->bool:
         print("2. 이름 수정")
         print("3. 연릭처 수정")
         print("4. 관심분야 수정")
+        print("5. 비밀번호 찾기 질문/답변 수정")
         print("0. 수정 종료")
 
         choice = input("메뉴 선택: ").strip()
@@ -434,6 +445,7 @@ def update(email: str = "", **kwargs)->bool:
 
                 if new_pw != pw_confirm:
                     print("[오류] 비밀번호가 일치하지 않습니다.")
+                    continue
 
                 updated_member.pw = _hash_password(new_pw)
                 updated = True
@@ -476,6 +488,17 @@ def update(email: str = "", **kwargs)->bool:
                 print("-> 관심분야가 성공적으로 수정되었습니다.")
             else:
                 print("[알림] 관심분야가 변경되지 않았습니다.")
+        elif choice == "5":
+            print(f"\n [현재 질문: {updated_member.pw_question}]")
+            #회원가입할 때 쓰는 질문 선택 함수
+            find_pw_info=is_valid_pw()
+            if not find_pw_info["answer"]:
+                print("[오류] 답변은 비워둘 수 없습니다.")
+                continue
+            updated_member.pw_question=find_pw_info["question"]
+            updated_member.pw_answer=find_pw_info["answer"]
+            updated=True
+            print("비밀번호 찾기 질문/답변이 수정되었습니다.")
 
         # 0. 수정 종료 및 저장
         elif choice == "0":

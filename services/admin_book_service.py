@@ -14,7 +14,10 @@ def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,
             if search_book["title"] == title.strip():
                 print("이미 등록된 도서입니다.")
                 return False
-
+    #TODO 항목 하나라도 안들어오면 return False
+    if title=="":
+        print("도서를 입력하세요")
+        return False
     # 2. 도서 id 생성 
     book_ids = [book["id"] for book in books] # 도서 목록에서 id만 추출
     
@@ -72,7 +75,17 @@ def book_delete(book_id: int) -> bool:
             # 성공 메세지를 위한 값 저장 
             deleted_id = book["id"]
             deleted_title = book["title"]
-
+            
+            # 대출 중인 도서는 삭제 불가 (삭제하면 대출 기록만 남아 반납 시 재고 복구가 안 됨)
+            loans = load_json("data/loans.json")
+            active_count = sum(
+                1 for loan in loans
+                if loan.get("book_id") == book_id and loan.get("status") == "대출중"
+            )
+            if active_count > 0:
+                print(f"현재 {active_count}권이 대출 중인 도서라 삭제할 수 없습니다. (반납 처리 후 삭제 가능)")
+                return False
+            
             # 전체 도서목록에서 찾은 도서 삭제
             books.remove(book)
             # 수정된 목록을 JSON 파일에 저장
@@ -152,21 +165,35 @@ def book_update(book_id: int, field_choice: int, new_value) -> bool:
             return False
 
     if field_choice == 6 and not 0.0 <= new_value <= 5.0:
-        print("평점은 음수이거나 5.0을 초과할 수 없습니다.")
+        print("평점은 0.0 ~ 5.0 사이로 입력해주세요.")
         return False
+    
+    # 재고 수정 시: 대여 가능 재고 + 현재 대출 중인 권수 = 총 보유량이 유지되어야 함
+    if field_choice in (7, 8):
+        loans = load_json("data/loans.json")
+        lent_count = sum(
+            1 for loan in loans
+            if loan.get("book_id") == book_id and loan.get("status") == "대출중"
+        )
 
-    if field_choice == 6:
-        try:
-            new_value = float(new_value)
-        except ValueError:
-            print("평점은 숫자여야 합니다.")
-            return False
-    elif field_choice in (7, 8):
-        try:
-            new_value = int(new_value)
-        except ValueError:
-            print("재고 수량은 정수여야 합니다.")
-            return False
+        # 7: 총 보유량 수정
+        if field_choice == 7:
+            if not 1 <= new_value <= 10:
+                print("도서 최대 보유량은 1 ~ 10의 범위 내로 입력해주세요.")
+                return False
+            min_total = target_book.get("available_stock", 0) + lent_count
+            if new_value < min_total:
+                print(f"총 보유량은 대여 가능 재고({target_book.get('available_stock', 0)}권) + "
+                      f"대출 중({lent_count}권) = {min_total}권보다 적을 수 없습니다.")
+                return False
+
+        # 8: 대여 가능 재고 수정
+        if field_choice == 8:
+            max_available = target_book.get("total_stock", 0) - lent_count
+            if not 0 <= new_value <= max_available:
+                print(f"대여 가능 재고는 0 ~ {max_available}권 사이로 입력해주세요. "
+                      f"(총 보유량 {target_book.get('total_stock', 0)}권 중 {lent_count}권 대출 중)")
+                return False
         
     # 도서 정보에서 수정할 부분을 field에 저장
     field = field_map[field_choice]

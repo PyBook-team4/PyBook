@@ -9,6 +9,7 @@ env/
 #로컬 데이터파일들 
 data/*.json
 data/.csv
+data/*.tmp
 
 # 파이썬 실행 캐시 파일 (실행 시 자동 생성되는 찌꺼기 파일들)
 __pycache__/

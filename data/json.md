@@ -10,7 +10,6 @@ data/member.json (회원정보)
     "phone": "010-1234-5678",
     "interest": "IT/개발, 소설",
     "point": 120,
-    "tier": "Silver",
     "last_login_date": "2026-10-19",
     "created_at": "2026-10-01"
   }

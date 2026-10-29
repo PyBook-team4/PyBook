@@ -3,11 +3,12 @@ from datetime import datetime
 
 class Loan:
     def __init__(self, loan_id: int, user_id: int, book_id: int, 
-                 loan_date: str = None, return_date: str = None, status: str = "대출중"):
+                 loan_date: str = None,due_date:str=None, return_date: str = None, status: str = "대출중"):
         self.loan_id = loan_id
         self.user_id = user_id
         self.book_id = book_id
         self.loan_date = loan_date or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.due_date=due_date
         self.return_date = return_date
         self.status = status
 
@@ -18,6 +19,7 @@ class Loan:
             "user_id": self.user_id,
             "book_id": self.book_id,
             "loan_date": self.loan_date,
+            "due_date":self.due_date,
             "return_date": self.return_date,
             "status": self.status
         }
@@ -30,6 +32,7 @@ class Loan:
             user_id=data.get("user_id"),
             book_id=data.get("book_id"),
             loan_date=data.get("loan_date"),
+            due_date=data.get("due_date"),
             return_date=data.get("return_date"),
             status=data.get("status", "대출중")
         )

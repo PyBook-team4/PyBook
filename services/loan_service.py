@@ -34,6 +34,10 @@ from utils.file_handler import load_json, save_json
 # 도서 대출 함수 추가
 def get_tier_info_by_point(point: int) -> dict:
     """등급 계산 함수"""
+    # 0. 포인트 값이 없거나 숫자가 아니면 0점 처리
+    if point is None or not isinstance(point,(int,float)):
+        point=0
+        
     # 1. 포인트 구간별 티어 판별
     if point >= 1000:
         tier_name = "VIP"
@@ -130,7 +134,7 @@ def borrow(user_id: str | int, book_id: int) -> bool:
         user_id   = target_member.get("user_id"),
         book_id     = target_book.get("id"),
         loan_date   = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        return_date = (datetime.now() + timedelta(days=loan_days)).strftime("%Y-%m-%d %H:%M:%S"),
+        due_date = (datetime.now() + timedelta(days=loan_days)).strftime("%Y-%m-%d %H:%M:%S"),
         status      = "대출중"
     )
 
@@ -156,6 +160,7 @@ def return_book(loan_id: int) -> bool:
     # 3. 반납 보상 포인트 지급 (예: 반납 시 10 포인트 적립)  members.json 접근
     # 4, 리뷰, 평점 남길 시 (예: 10포인트 추가 적립)        records.json 접근
     #TODO 책 퀴즈 맞출시 5포인트 적립 그냥 건너뛰어도 됨
+    #TODO 리뷰는 20자 이상
     # 5. 파일 저장
     
     # 접근 데이터 한번에 호출
@@ -171,7 +176,7 @@ def return_book(loan_id: int) -> bool:
                 return False
             now = datetime.now()
             # 반납 기준일과 오늘 날짜 비교
-            due_date_str = check_loan.get("return_date") 
+            due_date_str = check_loan.get("due_date") or check_loan.get("return_date")
             overdue_days = 0 # 반납 지연일
             
             if due_date_str:
@@ -277,7 +282,7 @@ def get_user_active_loans(user_id: str | int) -> list:
                 "loan_id": loan.get("loan_id"),
                 "book_title": book_title,
                 "loan_date": loan.get("loan_date"),
-                "return_date": loan.get("return_date")
+                "due_date": loan.get("due_date") or loan.get("return_date")
             })
             
     return active_loans
