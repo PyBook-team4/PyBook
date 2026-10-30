@@ -6,7 +6,7 @@ from utils.file_handler import load_json, save_json
 RECORDS_FILE="data/records.json"
 # 관리자 메뉴
 # 새로운 도서 등록
-def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,total_stock: int, available_stock:int) -> bool:
+def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,total_stock: int, available_stock:int,keywords:str="") -> bool:
     """ 새로운 도서 등록 """
     # 도서 목록 불러오기
     books = load_json("data/books.json")
@@ -67,9 +67,9 @@ def register_book(title: str, author: str, publisher:str, genre: str, isbn: str,
         rating=3.0,     #기본 평점은 3.0
         total_stock=total_stock,
         available_stock=available_stock,
-        reg_date=book_date
+        reg_date=book_date,
+        keywords=keywords.strip()
     )
-
     books.append(new_book.to_dict())
     
     # 9. json 파일 저장 하고 성공 메세지 출력
@@ -134,7 +134,8 @@ def book_update(book_id: int, field_choice: int, new_value) -> bool:
         5: "genre",
         6: "rating",
         7: "total_stock",
-        8: "available_stock"
+        8: "available_stock",
+        9: "keywords"
     }
 
     target_book = None # 수정할 도서의 정보 저장 변수 (dict)
@@ -210,7 +211,7 @@ def book_update(book_id: int, field_choice: int, new_value) -> bool:
                 print(f"대여 가능 재고는 0 ~ {max_available}권 사이로 입력해주세요. "
                       f"(총 보유량 {target_book.get('total_stock', 0)}권 중 {lent_count}권 대출 중)")
                 return False
-        
+       
     # 도서 정보에서 수정할 부분을 field에 저장
     field = field_map[field_choice]
     # 수정할 도서에 정보 일부분을 새로운 값으로 수정

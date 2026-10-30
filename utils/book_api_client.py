@@ -25,6 +25,7 @@ class BookClient:
             "key": self.api_key,
             "kwd": keyword,
             "category": "도서",
+            "systemType":"오프라인자료",    #인쇄도서만 불러오기
             "apiType": "json",
             "srchTarget": "total",
             "pageSize": page_size,
@@ -108,7 +109,7 @@ class BookClient:
             return f"API 통신 오류: {e}"
 '''
 
-"""주석 처리
+#주석처리
 # ==========================================
 # 단독 실행 테스트 블록
 # ==========================================
@@ -118,10 +119,10 @@ if __name__ == "__main__":
         client = BookClient()
         print(f"API 키 로드 성공: {client.api_key[:4]}********")
         
-        test_keyword = "토지"
+        test_keyword = "이기적 유전자"
         print(f"'{test_keyword}' 도서 검색 중...")
         
-        result = client.search_book(test_keyword, page_size=1)
+        result = client.search_book(test_keyword, page_size=10)
         
         print("\n[응답 데이터 확인]")
         print("-" * 50)
@@ -135,4 +136,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"실행 중 에러가 발생했습니다: {e}")
 
-        """
+  

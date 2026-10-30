@@ -9,6 +9,7 @@ from services.admin_book_service import (
     register_book, book_update, book_delete,get_all_book_records,admin_update_review
 )
 from services.member_service import signup_interests
+from services.book_service import search_books_by_keyword
 from utils.file_handler import load_json
 from animations.animation_effect import clear_screen
 
@@ -84,7 +85,7 @@ def _handle_member_management():
         print("4. 회원 정보 수정")
         print("5. 회원 강제 삭제")
         print("6. 휴면 회원 조회")
-        print("7. 이전 메뉴로 돌아가기")
+        print("0. 이전 메뉴로 돌아가기")
         print("====================================")
         
         sub_choice = input("원하시는 작업을 선택하세요: ").strip()
@@ -201,7 +202,7 @@ def _handle_member_management():
                 print(f"ID: {m.get('user_id')} | 이름: {m.get('name')} | 사유: {m.get('dormant_reason')}")
             input("\n계속하려면 엔터 키를 누르세요...")
 
-        elif sub_choice == '7':
+        elif sub_choice == '0':
             break
         else:
             print("\n잘못된 입력입니다. 번호를 다시 선택해주세요.\n")
@@ -219,7 +220,8 @@ def _handle_book_management():
         print("3. 도서 정보 수정")
         print("4. 도서 삭제")
         print("5. 도서 평점 및 리뷰(감상평) 수정")
-        print("6. 이전 메뉴로 돌아가기")
+        print("6. 외부 도서 정보 조회")
+        print("0. 이전 메뉴로 돌아가기")
         print("====================================")
 
         sub_choice = input("원하시는 작업을 선택하세요: ").strip()
@@ -238,10 +240,12 @@ def _handle_book_management():
             publisher = input("출판사: ").strip()
             genre = input("장르: ").strip()
             isbn = input("ISBN: ").strip()
+            print("\n책의 주제를 나타내는 단어를 입력하면 사용자 별 맞춤 도서 추천시 더 정확한 정보 제공이 가능합니다.")
+            keywords = input("키워드 (띄어쓰기로 구분, 엔터 시 생략): ").strip()
             try:
                 tot = int(input("총 보유량 (1~10): ").strip())
                 avail = int(input("대여 가능 재고: ").strip())
-                register_book(title, author, publisher, genre, isbn, tot, avail)
+                register_book(title, author, publisher, genre, isbn, tot, avail,keywords)
             except ValueError:
                 print("\n숫자를 올바르게 입력해주세요.")
             time.sleep(1.5)
@@ -250,7 +254,7 @@ def _handle_book_management():
             clear_screen()
             try:
                 book_id = int(input("수정할 도서 ID: ").strip())
-                field = int(input("항목 선택 (1:제목, 2:저자, 3:출판사, 4:ISBN, 5:장르, 6:평점, 7:총재고, 8:대여가능재고): ").strip())
+                field = int(input("항목 선택 (1:제목, 2:저자, 3:출판사, 4:ISBN, 5:장르, 6:평점, 7:총재고, 8:대여가능재고, 9:키워드): ").strip())
                 val = input("변경할 값 입력: ")
                 book_update(book_id, field, val)
             except ValueError:
@@ -313,9 +317,50 @@ def _handle_book_management():
             _, msg = admin_update_review(record_id=rec_id, new_rating=new_rating, new_review=new_review)
             print(f"\n{msg}")
             time.sleep(2)
-
         elif sub_choice == '6':
+            _show_external_books()
+            time.sleep(2)
+
+        elif sub_choice == '0':
             break
         else:
             print("\n잘못된 입력입니다. 올바른 숫자를 입력해주세요.\n")
             time.sleep(1)
+
+
+
+def _show_external_books():
+    """
+    외부 도서 정보 조회 (국립중앙도서관 Open API)
+    - 검색어로 국립중앙도서관 소장 도서를 조회해, 도서 등록(2번 메뉴)에 필요한 정보만 출력
+    """
+    clear_screen()
+    print("====================================")
+    print("  [외부 도서 정보 조회 - 국립중앙도서관]  ")
+    print("====================================")
+    keyword = input("검색할 도서 제목, 저자 또는 주제어를 입력하세요 (엔터 시 취소): ").strip()
+    if not keyword:
+        return
+
+    print("\n국립중앙도서관에서 도서를 검색하고 있습니다...")
+    try:
+        books = search_books_by_keyword(keyword, page_size=10)
+    except ValueError as e:
+        # BookClient는 .env에 API_KEY가 없으면 ValueError 발생
+        print(f"\n[오류] {e}")
+        input("\n계속하려면 엔터 키를 누르세요...")
+        return
+
+    if not books:
+        print(f"\n'{keyword}'에 대한 검색 결과가 없습니다.")
+        input("\n계속하려면 엔터 키를 누르세요...")
+        return
+
+    print(f"\n검색 결과 {len(books)}건 (도서 등록 시 참고하세요)")
+    print("-" * 70)
+    for idx, book in enumerate(books, start=1):
+        print(f"{idx}. {book['title']}")
+        print(f"    저자: {book['author']} | 출판사: {book['publisher']} | 발행: {book['pub_year'] or '-'}")
+        print(f"    장르: {book['genre']} | ISBN: {book['isbn'] or '없음'}")
+    print("-" * 70)
+    input("\n계속하려면 엔터 키를 누르세요...")

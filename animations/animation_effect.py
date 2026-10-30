@@ -118,4 +118,87 @@ def connecting_ai_animation():
     time.sleep(0.5)
 
 
+
+#TODO 국립중앙도서 api호출하는 동안 스피너 생성 admin_view에 연결하기
+def run_with_spinner(text, func, *args, **kwargs):
+    """
+    func(*args, **kwargs)를 실행하는 "동안" 스피너를 보여주고, 끝나면 func의 결과를 그대로 반환합니다.
+    - loading_spinner()는 정해진 시간(duration)만큼만 돌지만,
+      이 함수는 API 호출처럼 끝나는 시간을 모르는 작업이 실제로 끝날 때까지 돌아갑니다.
+    - 작업은 별도 스레드에서 실행하고, 메인 스레드는 그동안 스피너를 그립니다.
+    - 작업 중 예외가 발생하면 스피너를 지운 뒤 같은 예외를 다시 발생시킵니다.
+    """
+    import threading
+
+    outcome = {}                                    # 스레드에서 실행한 결과/예외를 담아올 상자
+
+    def worker():
+        try:
+            outcome["result"] = func(*args, **kwargs)
+        except Exception as e:                      # 예외는 여기서 잡아두고 메인 스레드에서 다시 발생
+            outcome["error"] = e
+
+    thread = threading.Thread(target=worker, daemon=True)   # daemon: 프로그램 종료 시 같이 종료
+    thread.start()
+
+    spinner = itertools.cycle(['|', '/', '-', '\\'])
+    start = time.time()
+    # 작업이 끝날 때까지 + 너무 빨리 끝나도 최소 0.6초는 보여줘서 깜빡임 방지
+    while thread.is_alive() or time.time() - start < 0.6:
+        sys.stdout.write(f'\r{text} {next(spinner)}')
+        sys.stdout.flush()
+        time.sleep(0.1)
+
+    # 스피너 줄 지우기
+    sys.stdout.write('\r' + ' ' * (len(text) * 2 + 5) + '\r')
+    sys.stdout.flush()
+
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome.get("result")
+
 #TODO 개발자들 엔딩 크래딧
+
+
+
+# ==========================================
+# 단독 실행 테스트: run_with_spinner 동작 확인
+#   - 프로젝트 폴더(PyBook)에서 실행:  python3 -m animations.animation_effect
+# ==========================================
+if __name__ == "__main__":
+
+    # [테스트 1] 3초 걸리는 가짜 작업 → 3초 동안 스피너가 돌고, 끝나면 결과 반환
+    def slow_task(seconds):
+        time.sleep(seconds)                 # API 응답을 기다리는 상황을 흉내냄
+        return f"{seconds}초 걸리는 작업 완료!"
+
+    print("[테스트 1] 3초짜리 작업")
+    result = run_with_spinner("⏳ 작업을 처리하고 있습니다...", slow_task, 3)
+    print(f"결과: {result}\n")
+
+    # [테스트 2] 작업 중 오류 → 스피너가 지워진 뒤 같은 오류가 그대로 전달되는지 확인
+    def failing_task():
+        time.sleep(1.5)
+        raise ValueError("일부러 발생시킨 오류")
+
+    print("[테스트 2] 작업 중 오류 발생")
+    try:
+        run_with_spinner("⚠️ 오류가 나는 작업을 실행하고 있습니다...", failing_task)
+    except ValueError as e:
+        print(f"오류를 정상적으로 전달받음: {e}\n")
+
+    # [테스트 3] 실제 국립중앙도서관 API 검색 (응답이 오는 순간 스피너가 멈춤)
+    #   - 프로젝트 폴더에서 "python3 -m animations.animation_effect"로 실행해야 services를 불러올 수 있음
+    print("[테스트 3] 국립중앙도서관 API 검색")
+    try:
+        from services.book_service import search_books_by_keyword
+        start = time.time()
+        books = run_with_spinner("📚 국립중앙도서관에서 '코스모스'를 검색하고 있습니다...",
+                                 search_books_by_keyword, "코스모스", page_size=5)
+        print(f"{time.time() - start:.1f}초 만에 {len(books)}권 검색 완료")
+        for book in books:
+            print(f"  - {book['title']} / {book['author']} / {book['publisher']}")
+    except ImportError:
+        print("services를 불러올 수 없습니다. 프로젝트 폴더에서 'python3 -m animations.animation_effect'로 실행해주세요.")
+    except ValueError as e:
+        print(f"API 키 오류: {e}")
