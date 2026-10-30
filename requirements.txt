@@ -2,19 +2,13 @@
 python-dotenv         # .env 파일에서 환경변수(API 키 등)를 로드
 
 # --- 외부 API 통신 ---
-requests              # Google Books API 등 일반적인 HTTP REST API 통신용
-openai                # OpenAI API 클라이언트 (AI 챗봇, 퀴즈 출제)
-google-generativeai   # Google Gemini API 클라이언트 (Gemini 퀴즈 출제 테스트용)
+requests              # HTTP REST API 통신용 (현재는 urllib 사용, 추후 사용 예정)
+openai                # OpenAI API 클라이언트 (AI 챗봇, 도서 퀴즈 출제)
+google-generativeai   # Google Gemini API 클라이언트 (추후 사용 예정)
 
 # --- 데이터 시각화 및 머신러닝 (추천/분석) ---
-matplotlib            # 장르별 독서 비율 등 차트 및 그래프 시각화
-scikit-learn          # 코사인 유사도 계산 (임베딩 텍스트 기반 도서 추천 알고리즘)
+matplotlib            # 독서 연대기 월별/장르별 그래프
+scikit-learn          # 코사인 유사도 계산 (도서 추천, 추후 사용 예정)
 
-
-#테스트를 위한 라이브러리
+# --- 테스트 ---
 pytest
-
-dotenv
-
-#그래프 시각화를 위한 라이브러리
-matplotlib

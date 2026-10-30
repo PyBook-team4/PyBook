@@ -1,6 +1,6 @@
 # views/user_view.py
 import time
-from services import search_service, loan_service, member_service, analytics_service,my_loan_service
+from services import search_service, loan_service, member_service, analytics_service,my_loan_service,recommend_service
 from services.ai_service import AIChatService
 from animations.animation_effect import clear_screen, connecting_ai_animation, typing_effect
 
@@ -21,7 +21,21 @@ def run_logged_in_menu(current_user):
         print(f"====================================")
         print("1. 도서 검색 및 대출하기")
         print("2. 도서 반납하기")
-        print("3. 도서 추천 (베스트셀러)")  #TODO
+        print("3. 맞춤 도서 추천")
+        #TODO
+        """
+            1. 관심있는 키워드랑 같은 장르중에서 평점순으로 n개 
+            2. 키워드 따와가지고 openai api             #가지고 있지 않은 도서도 추천
+            3. 국립중앙도서관 api 키워드 기반으로 띄워주기    #가지고 있지 않은 도서도 추천
+
+            [도서 추천 (메뉴 3)]
+            1. 나를 위한 추천 (코사인 유사도)  ← 관심분야 + 읽은 책 평점 기반, 추천 이유 표시
+            2. 분야별 인기 도서               ← 관심분야 장르 중 평점순 (아이디어 ①)
+            3. AI 사서 추천 (선택)             ← OpenAI로 보유하지 않은 책까지 추천 (아이디어 ②)
+            0. 이전 메뉴
+               
+                
+        """
         print("4. 명예의 전당 (다독왕)")
         print("5. PyBook Chat Bot")
         print("\n")
@@ -42,8 +56,8 @@ def run_logged_in_menu(current_user):
 
         # 3. 도서 추천
         elif sub_choice == '3':
-            print("\n도서 추천 기능 연동 예정...\n")
-            time.sleep(1.5)
+            _handle_recommend(current_user)
+        
 
         # 4. 명예의 전당
         elif sub_choice == '4':
@@ -144,6 +158,77 @@ def _handle_book_search_and_borrow(current_user):
         else:
             print("\n[오류] 올바른 번호를 입력해주세요.")
             time.sleep(1)
+
+def _handle_recommend(current_user):
+    """
+    맞춤 도서 추천 화면
+    - 관심분야 / 읽은 책(평점) / 20자 이상 리뷰를 바탕으로 코사인 유사도가 높은 도서 5권을 보여줌
+    - 목록에서 번호를 고르면 바로 대출
+    """
+    clear_screen()
+    print("====================================")
+    print("            맞춤 도서 추천            ")
+    print("====================================")
+    print("관심분야, 읽은 책의 평점, 남긴 리뷰를 분석하고 있습니다...")
+
+    # 추천 계산은 recommend_service가 담당 (scikit-learn이 없으면 ImportError 발생)
+    try:
+        result = recommend_service.recommend_for_user(current_user["user_id"], top_n=5)
+    except ImportError:
+        # scikit-learn이 설치되지 않은 PC에서도 프로그램이 멈추지 않도록 안내만 출력
+        print("\n[안내] 도서 추천을 사용하려면 scikit-learn을 설치해주세요: python3 -m pip install scikit-learn")
+        input("\n계속하려면 엔터 키를 누르세요...")
+        return
+
+    recommendations = result["items"]       # 추천 도서 목록
+    mode = result["mode"]                   # 추천 단계: popular / basic / full
+    review_count = result["review_count"]   # 추천에 반영 가능한 내 리뷰 수
+    review_goal = result["review_goal"]     # full 추천을 시작하는 리뷰 수 (5)
+
+    # 추천 단계 안내: 데이터가 쌓일수록 추천이 정확해진다는 것을 보여줌
+    print()
+    if mode == "popular":
+        print(" 관심분야를 설정하거나 책을 읽고 리뷰를 남기면 맞춤 추천을 받을 수 있어요.")
+        print("   지금은 평점이 높은 인기 도서를 보여드려요.")
+    elif mode == "basic":
+        print(f" 리뷰 {review_count}/{review_goal}권 | 관심분야와 읽은 책의 평점으로 추천해요.")
+        print(f"   20자 이상 리뷰를 {review_goal - review_count}권 더 남기면 리뷰 내용까지 반영해 더 정확하게 추천해요!")
+    else:  # full
+        print(f" 관심분야, 읽은 책의 평점, 남기신 리뷰 {review_count}개를 모두 반영한 맞춤 추천이에요.")
+
+    if not recommendations:
+        print("\n추천할 수 있는 도서가 없습니다. (모든 도서를 이미 읽으셨어요!)")
+        input("\n계속하려면 엔터 키를 누르세요...")
+        return
+
+    print()
+    for idx, item in enumerate(recommendations, start=1):
+        book = item["book"]
+        stock = book.get("available_stock", 0)
+        stock_str = f"대출 가능 {stock}권" if stock > 0 else "대출 불가 (재고 없음)"
+
+        # 1줄: 도서 정보 / 2줄: 평점·재고 / 3줄: 추천 이유 (+ 유사도 점수가 있으면 함께 표시)
+        print(f"{idx}. 『{book.get('title')}』 - {book.get('author')} ({book.get('genre')})")
+        print(f"    {_rating_to_stars(book.get('rating'))} | {stock_str}")
+        if item["score"] is not None:
+            print(f"    └ {item['reason']} (유사도 {item['score']:.2f})")
+        else:
+            print(f"    └ {item['reason']}")
+
+    print("====================================")
+    choice = input("대출할 도서 번호를 입력하세요 (엔터 시 돌아가기): ").strip()
+
+    if not choice:
+        return
+    if not choice.isdigit() or not 1 <= int(choice) <= len(recommendations):
+        print("\n[오류] 목록에 있는 번호를 입력해주세요.")
+        time.sleep(1.5)
+        return
+
+    # 고른 도서를 바로 대출 (대출 한도/재고 확인은 loan_service.borrow()가 처리)
+    selected_book = recommendations[int(choice) - 1]["book"]
+    loan_service.borrow(user_id=current_user["user_id"], book_id=selected_book.get("id"))
+    input("\n계속하려면 엔터 키를 누르세요...")
 
 
 def _handle_book_return(current_user):
@@ -316,10 +401,4 @@ def _show_current_loans(current_user):
         print(f"    대출일: {(loan['loan_date'] or '')[:10]} | 반납기한: {(loan['due_date'] or '')[:10]} ({d_day})")
 
 
-        #TODO
-        """
-        1. 관심있는 키워드랑 같은 장르중에서 평점순으로 n개 
-        2. 키워드 따와가지고 openai api             #가지고 있지 않은 도서도 추천
-        3. 국립중앙도서관 api 키워드 기반으로 띄워주기    #가지고 있지 않은 도서도 추천
         
-        """

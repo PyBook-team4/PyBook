@@ -4,7 +4,7 @@ from datetime import datetime
 class Book:
     def __init__(self, id: int, title: str, author: str, publisher: str, 
                  genre: str, isbn: str, rating: float = 5.0, 
-                 total_stock: int = 2, available_stock: int = 2, reg_date: str = None):
+                 total_stock: int = 2, available_stock: int = 2, reg_date: str = None,keywords:str=""):
         self.id = id
         self.title = title
         self.author = author
@@ -15,6 +15,7 @@ class Book:
         self.total_stock = total_stock
         self.available_stock = available_stock
         self.reg_date = reg_date or datetime.now().strftime("%Y-%m-%d")
+        self.keywords=keywords
 
     def to_dict(self) -> dict:
         """객체를 JSON 저장을 위한 딕셔너리로 변환"""
@@ -28,7 +29,8 @@ class Book:
             "rating": self.rating,
             "total_stock": self.total_stock,
             "available_stock": self.available_stock,
-            "reg_date": self.reg_date
+            "reg_date": self.reg_date,
+            "keywords":self.keywords
         }
 
     @classmethod
@@ -44,5 +46,6 @@ class Book:
             rating=data.get("rating", 5.0),
             total_stock=data.get("total_stock", 2),
             available_stock=data.get("available_stock", 2),
-            reg_date=data.get("reg_date")
+            reg_date=data.get("reg_date"),
+            keywords=data.get("keywords", "")
         )

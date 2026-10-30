@@ -1,0 +1,106 @@
+[
+    {
+        "record_id": 1001,
+        "user_id": 4,
+        "book_id": 1,
+        "rating": 4,
+        "review": "2",
+        "created_at": "2026-10-27"
+    },
+    {
+        "record_id": 1002,
+        "user_id": 4,
+        "book_id": 1,
+        "rating": 3.0,
+        "review": "너무 재밌다",
+        "created_at": "2026-10-28"
+    },
+    {
+        "record_id": 1003,
+        "user_id": 6,
+        "book_id": 1,
+        "rating": null,
+        "review": "책이 너무 재밌다",
+        "created_at": "2026-10-28"
+    },
+    {
+        "record_id": 2001,
+        "user_id": 4,
+        "book_id": 101,
+        "rating": 5,
+        "review": "문장이 강렬해서 오래 남는 책",
+        "created_at": "2026-06-08"
+    },
+    {
+        "record_id": 2002,
+        "user_id": 4,
+        "book_id": 1,
+        "rating": 4,
+        "review": "예제가 많아서 따라하기 좋았다",
+        "created_at": "2026-06-21"
+    },
+    {
+        "record_id": 2003,
+        "user_id": 4,
+        "book_id": 102,
+        "rating": 5,
+        "review": "인류사를 보는 시각이 바뀜",
+        "created_at": "2026-08-07"
+    },
+    {
+        "record_id": 2004,
+        "user_id": 4,
+        "book_id": 3,
+        "rating": 4,
+        "review": "",
+        "created_at": "2026-08-16"
+    },
+    {
+        "record_id": 2005,
+        "user_id": 4,
+        "book_id": 103,
+        "rating": null,
+        "review": "토론하고 싶어지는 질문들",
+        "created_at": "2026-09-11"
+    },
+    {
+        "record_id": 2006,
+        "user_id": 4,
+        "book_id": 2,
+        "rating": 5,
+        "review": "개발자라면 꼭 읽어야 할 책",
+        "created_at": "2026-10-06"
+    },
+    {
+        "record_id": 2007,
+        "user_id": 4,
+        "book_id": 101,
+        "rating": 4,
+        "review": "두 번째 읽으니 또 다르게 읽힘",
+        "created_at": "2026-10-22"
+    },
+    {
+        "record_id": 2008,
+        "user_id": 4,
+        "book_id": 10,
+        "rating": 3,
+        "review": "기초 정리용으로 적당함",
+        "created_at": "2026-10-28"
+    },
+    {
+        "record_id": 2009,
+        "user_id": 4,
+        "book_id": 5,
+        "rating": 3,
+        "review": "파이썬 알고리즘에 대해서 배울 수있어 매우 유익한 시간이었습니다.",
+        "created_at": "2026-10-29"
+    },
+    {
+        "record_id": 2010,
+        "user_id": 4,
+        "book_id": 5,
+        "rating": 5,
+        "review": "이썬 알고리즘에 대해서 공부할수있었습니다.",
+        "created_at": "2026-10-29"
+    }
+]

@@ -5,11 +5,11 @@ from animations.animation_effect import show_intro_animation, show_goodbye_anima
 from views.user_view import run_logged_in_menu
 from views.admin_view import run_admin_menu
 
-#TODO 모든 비밀번호에 파이썬 기본 모듈인 getpass의 getpass()를 써서 입력한 비밀번호가 콘솔창에 노출되지 않도록 할까?
+#TODO 모든 비밀번호에 파이썬 기본 모듈인 getpass의 getpass()를 써서 입력한 비밀번호가 콘솔창에 노출되지 않도록
 def main():
     # 오프닝 애니메이션 실행
     show_intro_animation()
-    
+
     
     while True:
         clear_screen()

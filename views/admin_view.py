@@ -1,5 +1,4 @@
 # views/admin_view.py
-
 import time
 from datetime import datetime
 from services.admin_member_service import (
@@ -13,7 +12,7 @@ from services.member_service import signup_interests
 from utils.file_handler import load_json
 from animations.animation_effect import clear_screen
 
-
+#TODO 현재 국립중앙도서관 api 전혀 사용하지 않고 있음 이거 admin에서 도서 참고 자료 조회 느낌으로 구현해서 넣는것도 좋아보임
 def _display_member_summary(members: list):
     """회원 수정/삭제 전에 회원 기본 정보(ID, 이름, 이메일) 목록 출력"""
     print("=" * 55)
