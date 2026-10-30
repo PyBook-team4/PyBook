@@ -1,7 +1,6 @@
 # services/recommend_service.py
-# ============================================================
+
 # 도서 추천 서비스 (콘텐츠 기반 추천 + 코사인 유사도)
-# ------------------------------------------------------------
 # [핵심 아이디어]
 #   1. 모든 도서를 "텍스트(장르 + 키워드 + 제목 + 저자)"로 만든 뒤 숫자 벡터로 바꾼다. (TF-IDF)
 #   2. 회원의 취향도 같은 방식으로 벡터로 만든다.
@@ -48,24 +47,17 @@ REVIEW_GOAL = 5
 
 
 def _book_text(book: dict) -> str:
-    """
-    도서 1권을 TF-IDF에 넣을 텍스트 한 줄로 만든다.
-    - 장르를 두 번 넣어서 제목/저자보다 장르가 더 크게 반영되도록 가중치를 준다.
-    - 출판사는 책의 주제와 관계가 적어서 넣지 않는다. (같은 출판사라고 비슷한 책은 아니므로)
-    - keywords가 없는 도서(새로 등록한 책 등)는 빈 문자열로 처리
-    """
+    
     genre = book.get("genre", "")
     keywords = book.get("keywords", "")
     title = book.get("title", "")
     author = book.get("author", "")
     return f"{genre} {genre} {keywords} {title} {author}"
 
-
+#회원가입 시 관심분야(interest)를 설정하지 않고 아직 읽은 책이 하나도 없는 경우 
+#
 def _popular_books(books: list, exclude_ids: set, top_n: int) -> list[dict]:
-    """
-    취향 정보가 하나도 없을 때(관심분야 X, 읽은 책 X) 사용하는 대체 추천.
-    → 아직 안 읽은 책 중 평점이 높은 순서로 top_n권
-    """
+
     candidates = [b for b in books if b.get("id") not in exclude_ids]
     candidates.sort(key=lambda b: b.get("rating") or 0, reverse=True)
     return [
@@ -75,11 +67,7 @@ def _popular_books(books: list, exclude_ids: set, top_n: int) -> list[dict]:
 
 
 def _is_usable_review(record: dict) -> bool:
-    """
-    추천에 쓸 수 있는 리뷰인지 확인
-    - 20자 이상이고 (짧은 리뷰는 정보가 적음)
-    - 평점이 3점 이상이거나 평점을 남기지 않은 경우 (싫어한 책의 리뷰는 제외)
-    """
+
     review = (record.get("review") or "").strip()
     rating = record.get("rating")
     if len(review) < REVIEW_MIN_LENGTH:
@@ -90,20 +78,11 @@ def _is_usable_review(record: dict) -> bool:
 
 
 def recommend_for_user(user_id: int, top_n: int = 5) -> dict:
-    """
-    회원 맞춤 도서 추천 결과를 반환한다.
-    - 반환값 (dict)
-        "items"        : [{"book": 도서dict, "score": 유사도(0~1) 또는 None, "reason": 추천 이유}, ...]
-        "mode"         : "popular" / "basic" / "full"  (어떤 단계의 추천인지)
-        "review_count" : 추천에 쓸 수 있는 내 리뷰 개수 (20자 이상, 평점 3점 이상)
-        "review_goal"  : full 추천을 시작하는 리뷰 개수 (REVIEW_GOAL)
-    - scikit-learn이 설치되어 있지 않으면 ImportError가 발생 → 화면(view)에서 설치 안내
-    """
-    # scikit-learn은 이 함수를 쓸 때만 불러온다.
-    # (파일 맨 위에서 불러오면 scikit-learn이 없는 PC에서는 프로그램 전체가 실행되지 않음)
-    from scipy.sparse import vstack                                   # 여러 벡터를 행렬 하나로 쌓는 함수
-    from sklearn.feature_extraction.text import TfidfVectorizer       # 텍스트 → TF-IDF 벡터 변환기
-    from sklearn.metrics.pairwise import cosine_similarity            # 코사인 유사도 계산 함수
+
+    
+    from scipy.sparse import vstack                                   
+    from sklearn.feature_extraction.text import TfidfVectorizer      
+    from sklearn.metrics.pairwise import cosine_similarity            
 
     # ------------------------------------------------------------
     # 0. 데이터 불러오기
@@ -137,17 +116,8 @@ def recommend_for_user(user_id: int, top_n: int = 5) -> dict:
     review_count = len(usable_reviews)
     mode = "full" if review_count >= REVIEW_GOAL else "basic"
 
-    # ------------------------------------------------------------
-    # 1. 도서 텍스트 → TF-IDF 벡터
-    # ------------------------------------------------------------
-    # TF-IDF: 각 책에서 "그 책을 특징짓는 글자 조각"일수록 높은 점수를 주는 방식
-    #   - TF  (Term Frequency)        : 한 책 안에서 그 조각이 얼마나 자주 나오는지
-    #   - IDF (Inverse Doc Frequency) : 모든 책에 흔하게 나오는 조각일수록 점수를 낮춤
-    #
-    # analyzer="char_wb", ngram_range=(2, 3)
-    #   → 단어를 글자 2~3개 단위로 잘라서 비교 (예: "파이썬" → "파이", "이썬", "파이썬")
-    #   → 한국어는 "문명의", "문명을"처럼 조사가 붙어도 "문명"이라는 공통 조각으로 묶을 수 있음
-    #     (형태소 분석기 없이도 한국어를 어느 정도 비교할 수 있는 간단한 방법)
+
+     # 1. 도서 텍스트 → TF-IDF 벡터
     vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 3))
     book_matrix = vectorizer.fit_transform([_book_text(b) for b in books])
     # book_matrix: (도서 수 × 글자조각 수) 크기의 행렬. i번째 행 = i번째 도서의 벡터
@@ -155,11 +125,8 @@ def recommend_for_user(user_id: int, top_n: int = 5) -> dict:
     # 도서 id → book_matrix 의 행 번호
     id_to_row = {b.get("id"): i for i, b in enumerate(books)}
 
-    # ------------------------------------------------------------
     # 2. 회원 취향 벡터 만들기
-    # ------------------------------------------------------------
-    # sources: 취향을 구성하는 재료 목록. 나중에 "추천 이유"를 보여줄 때도 사용
-    #   각 항목 = (재료 종류, 표시할 이름, 벡터, 가중치)
+
     sources = []
 
     # 2-1. 관심분야 (예: ["문학", "종교"]) → 각각 하나의 재료
@@ -185,8 +152,7 @@ def recommend_for_user(user_id: int, top_n: int = 5) -> dict:
         sources.append(("book", title, book_matrix[row], rating / 5))
 
     # 2-3. 20자 이상 리뷰 → 무엇이 좋았는지가 드러나는 문장
-    #      리뷰가 REVIEW_GOAL(5)개 이상 쌓인 "full" 단계에서만 반영
-    #      (리뷰가 1~2개뿐이면 그 몇 문장에 추천이 크게 휘둘리기 때문)
+  
     if mode == "full":
         for r in usable_reviews:
             review = r.get("review").strip()

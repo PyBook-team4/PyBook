@@ -18,6 +18,7 @@
 - [기술 스택](#기술-스택)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [프로젝트 구조](#프로젝트-구조)
+- [데이터 구조](#데이터-구조)
 - [시작하기](#시작하기)
 - [주요 구현 사항](#주요-구현-사항)
 - [트러블슈팅](#트러블슈팅)
@@ -164,6 +165,7 @@ PyBook/
 ├── requirements.txt              # 필요한 라이브러리 목록
 ├── .env.example                  # 환경 변수 예시 (.env는 git에 올리지 않음)
 ├── function.md                   # 파일별 함수 기능 정리 문서
+├── flowchart.md                  # 메뉴 흐름도
 │
 ├── views/                        # 화면 출력 + 입력 + 메뉴 흐름
 │   ├── user_view.py              # 일반 회원 메뉴, 마이페이지, 도서 추천 화면
@@ -196,14 +198,38 @@ PyBook/
 ├── animations/
 │   └── animation_effect.py       # 시작/종료 화면, 타이핑 효과, 로딩 스피너
 │
-└── data/                         # JSON 파일 저장소 (git에 올리지 않음)
+└── data/                         # JSON 파일 저장소 (json.md 외에는 git에 올리지 않음)
+    ├── json.md                   # 데이터 구조(JSON 스키마) 문서
     ├── members.json
     ├── books.json
     ├── loans.json
     └── records.json
 ```
 
-> 파일별 함수 설명은 [function.md](function.md)를 참고하세요.
+> 파일별 함수 설명은 [function.md](function.md), 메뉴 흐름은 [flowchart.md](flowchart.md)를 참고하세요.
+
+---
+
+## 데이터 구조
+
+별도 데이터베이스 없이 `data/` 폴더의 **JSON 파일 4개**를 저장소로 사용하며, 각 파일은 `models/`의 클래스와 1:1로 대응합니다.
+
+| 파일 | 내용 | 모델 | 주요 필드 |
+|------|------|------|-----------|
+| `members.json` | 회원 | `Member` | `user_id`, `email`, `pw`(SHA-256 해시), `interest`(관심분야), `point`, `last_login` |
+| `books.json` | 도서 | `Book` | `id`, `title`, `genre`, `rating`, `total_stock`, `available_stock`, `keywords`(추천용) |
+| `loans.json` | 대출/반납 | `Loan` | `loan_id`, `user_id`, `book_id`, `due_date`(반납 기한), `return_date`(실제 반납일), `status` |
+| `records.json` | 평점/감상평 | `Record` | `record_id`, `user_id`, `book_id`, `rating`, `review` |
+
+```
+members.user_id ◄── loans.user_id / records.user_id
+books.id        ◄── loans.book_id / records.book_id
+```
+
+- 등급은 저장하지 않고 `point`로 그때그때 계산합니다.
+- 재고는 항상 `available_stock + 대출 중 권수 = total_stock`을 유지합니다.
+
+> 필드별 타입, 예시 JSON, 데이터를 직접 수정할 때 주의할 점은 [data/json.md](data/json.md)를 참고하세요.
 
 ---
 

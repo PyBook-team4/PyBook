@@ -21,3 +21,6 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+#backup 파일들
+*.bak
